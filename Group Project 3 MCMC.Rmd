@@ -1,0 +1,155 @@
+---
+title: 'Project 3: Baysian modeling of hurricane trajectories'
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+
+# Hurricane Data
+hurricane703.csv collected the track data of 703 hurricanes in  the North Atlantic area since 1950. For all the storms, their location (longitude \& latitude) and maximum wind speed were recorded every 6 hours. The data includes the following variables 
+
+1. **ID**:  ID of the hurricans
+2. **Season**: In which \textbf{year} the hurricane occurred 
+3. **Month**: In which \textbf{month} the hurricane occurred 
+4. **Nature**:  Nature of the hurricane 
+  + ET: Extra Tropical
+  + DS: Disturbance
+  + NR: Not Rated
+  + SS: Sub Tropical
+  + TS: Tropical Storm
+5. **time**: dates and time of the record  
+6. **Latitude** and **Longitude**:  The location of  a hurricane check point 
+7. **Wind.kt**  Maximum wind speed (in Knot) at each check point 
+
+
+
+##  Load  and explore the hurrican data through visulaizations
+
+```{r eval=FALSE, include=TRUE}
+library(ggplot2)
+dt = read.csv("./Group Projects/p8160_hurricane/hurricane703.csv")
+ggplot(data=dt, aes(x = Longitude, y = Latitude)) + 
+  stat_summary_2d(data = dt, aes(x = Longitude, y = Latitude, z = dt$Wind.kt), fun = median, binwidth = c(1, 1), show.legend = TRUE)
+library(data.table)
+dt <- as.data.table(dt)
+summary(dt)
+```
+Overlay the hurrican data in the world map
+```{r eval=FALSE, include=TRUE}
+library(maps)
+map <- ggplot(data = dt, aes(x = Longitude, y = Latitude)) + 
+  geom_polygon(data = map_data(map = 'world'), aes(x = long, y = lat, group = group))
+map +
+  stat_summary_2d(data = dt, aes(x = Longitude, y = Latitude, z = dt$Wind.kt), fun = median, binwidth = c(1, 1), show.legend = TRUE, alpha = 0.75) + 
+  ggtitle(paste0("Atlantic Windstorm mean knot"))
+```
+Additional Plots
+```{r eval=FALSE, include=TRUE}
+map <- ggplot(dt, aes(x = Longitude, y = Latitude, group = ID)) + 
+  geom_polygon(data = map_data("world"), 
+               aes(x = long, y = lat, group = group), 
+               fill = "gray25", colour = "gray10", size = 0.2) + 
+  geom_path(data = dt, aes(group = ID, colour = Wind.kt), size = 0.5) + 
+  xlim(-138, -20) + ylim(3, 55) + 
+  labs(x = "", y = "", colour = "Wind \n(knots)") + 
+  theme(panel.background = element_rect(fill = "gray10", colour = "gray30"),
+        axis.text.x = element_blank(), axis.text.y = element_blank(), 
+        axis.ticks = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+seasonrange <- paste(range(dt[, Season]), collapse=" - ")
+
+map + ggtitle(paste("Atlantic named Windstorm Trajectories (", 
+                     seasonrange, ")\n")) 
+```
+Show hurricance tracks by month
+```{r eval=FALSE, include=TRUE}
+mapMonth <- map + facet_wrap(~ Month) +
+  ggtitle(paste("Atlantic named Windstorm Trajectories by Month (", 
+                 seasonrange, ")\n")) 
+mapMonth
+```
+
+
+
+# A Hierarchical Bayesian model for hurricane trajectories. 
+
+Climate researchers are interested in modeling the hurricane trajectories to forecast the wind speed. Let $t$ be time (in hours) since a hurricane began, and For each hurricane $i$, we denote $Y_{i}(t)$ be the wind speed of the $i$th hurricane at time $t$. The following Bayesian model was suggested.  
+
+
+$$Y_{i}(t+6) =\beta_{0,i}+\beta_{1,i}Y_{i}(t) + \beta_{2,i}\Delta_{i,1}(t)+
+\beta_{3,i}\Delta_{i,2}(t) +\beta_{4,i}\Delta_{i,3}(t)  + \epsilon_{i}(t)$$   
+where $Y_{i}(t)$ the wind speed at time $t$ (i.e. 6 hours earlier),  $\Delta_{i,1}(t)$, $\Delta_{i,2}(t)$ and $\Delta_{i,3}(t)$ are the changes of latitude, longitude and wind speed between $t$ and $t+6$, and $\epsilon_{i,t}$ follows a  normal distributions with mean zero and variance $\sigma^2$, independent across $t$. 
+
+
+In the model,  $\boldsymbol{\beta}_{i} =  (\beta_{0,i},\beta_{1,i},...,\beta_{7,i})$ are the random coefficients associated the $i$th hurricane, we assume that 
+
+$$\boldsymbol{\beta}_{i} \sim N(\boldsymbol{\beta}, \boldsymbol{\Sigma})$$
+follows a multivariate normal distributions with mean $\boldsymbol{\beta}$ and covariance matrix $\Sigma$.
+
+
+\paragraph{Prior distributions}
+
+We assume the following non-informative or weak prior distributions for $\sigma^2$, $\boldsymbol{\beta}$ and $\Sigma$.
+$$P(\sigma^2) \propto \frac{1}{\sigma^2};\quad P(\boldsymbol{\beta})\propto 1;\quad P(\Sigma^{-1}) \propto 
+|\Sigma|^{-(d+1)} \exp(-\frac{1}{2}\Sigma^{-1})$$
+$d$ is dimension of $\beta$.
+
+
+
+
+
+## Your tasks:
+
+1. Let $\mathbf{B}= (\boldsymbol{\beta}_{1}^\top,...,\boldsymbol{\beta}_{n}^\top)^\top$, derive the posterior distribution of the parameters $\Theta=(\mathbf{B}^\top,\boldsymbol{\beta}^\top,\sigma^2, \Sigma)$.
+
+2. Design a MCMC algorithm to generate the posterior distribution of $\Theta$; 
+
+3. Estimate $\Theta$ based on based on the generated MCMC chain in the previous step;
+
+4. How well can your estimated Bayesian model track the individual hurricanes? 
+
+5. Let $x_{i,1}$ be the month of year when the $i$-th hurricane started, $x_{i,2}$ be the calendar year of the $i$ hurricane, and $x_{i,3}$ be the type of the $i$-th hurricane. Based on that information, and your estimated Bayesian model, (1) explore the seasonal differences, and (2) is there any evidence supporting the statement that "the hurricane wind speed has been increasing over years". 
+
+6. The attached $hurricaneoutcome2.csv$ recorded the damages and death caused by 46 hurricanes in the U.S, and some features extracted from the hurricane records. The variables include
+
+    **ID**:  ID of the hurricans
+    
+    **Season**: In which \textbf{year} the hurricane occurred 
+    
+    **Month**: In which \textbf{month} the hurricane occurred 
+    
+    **Nature**:  Nature of the hurricane 
+      + ET: Extra Tropical
+      + DS: Disturbance
+      + NR: Not Rated
+      + SS: Sub Tropical
+      + TS: Tropical Storm
+      
+    **Damage**: Financial loss (in Billion U.S. dollars) caused by hurricanes
+    
+    **Deaths**: Number of death caused by hurricanes
+    
+    **Maxspeed**: Maximum recorded wind speed of the hurricane
+    
+    **Meanspeed**: average  wind speed of the hurricane
+    
+    **Maxpressure**: Maximum recorded central pressure of the hurricane
+    
+    **Meanpressure**: average central pressure of the hurricane
+    
+    **Hours**: Duration of the hurricane in hours 
+    
+    **Total.Pop**:  Total affected population   
+    
+    **Percent.Poor**: \% affected population that reside in low GDP countres (i.e. GDP per Capita     $<=$ 10,000)  
+    
+    **Percent.USA**:  \% affected population that reside in the United States   
+
+
+Build a model that combines those information and the estimated coefficients from the Baysian model to predict the hurricane-induced damage and deaths. Which characteristics of the hurricanes are associated with damage and deaths? How would you draw inferences?
+
+7. Write a report of your findings.
