@@ -69,4 +69,18 @@ In the equation above, $\pi(\textbf{B}, \sigma^2, \Sigma)$ only depends on $\tex
 $$\pi(\boldsymbol{\beta} \mid \textbf{B}, \sigma^2, \Sigma, Y_i) \propto \frac{1}{\sigma^2} \exp\Big\{- \frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top\Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta})\Big\}$$
 $$\propto \frac{1}{\sigma^2}\exp\Big\{-\frac{1}{2}\Big(\boldsymbol{\beta}_i^\top\Sigma^{-1}\boldsymbol{\beta}_i - \boldsymbol{\beta_i}^\top \Sigma^{-1}\boldsymbol{\beta} - \boldsymbol{\beta}^\top\Sigma^{-1}\boldsymbol{\beta}_i - \boldsymbol{\beta}^\top\Sigma^{-1}\boldsymbol{\beta}\Big)\Big\}$$
 $$\propto \frac{1}{\sigma^2}\exp\Big\{\boldsymbol{\beta}^\top\Sigma^{-1}\boldsymbol{\beta}_i - \frac{1}{2}\boldsymbol{\beta}^\top\Sigma^{-1}\boldsymbol{\beta}\Big\}$$
-I believe we want to expand and simplify to find a recognizable distribution, but I'm not sure what to do from here. Seems like I've made an error somewhere.
+I believe we want to expand and simplify to find a recognizable distribution, but I'm not sure what to do from here. Seems like I've made an error somewhere? Would it be easier to do Metropolis-Hastings?
+
+\newpage
+
+The log of the posterior can be written as:
+$$\log{\pi(\textbf{B}, \boldsymbol{\beta}, \sigma^2, \Sigma \mid Y_i)} \propto \log f_{Y_i(t + 6)}(Y_i \mid \boldsymbol{\beta}_i, \sigma^2) + \log \pi(\Theta),$$
+
+where
+
+$$\pi(\Theta) \propto \prod_{i=1}^n \det(2\pi\Sigma)^{-\frac{1}{2}} \exp(-\frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta})) \times 1 \times \frac{1}{\sigma^2} \times |\Sigma|^{-(d+1)} \exp(-\frac{1}{2}\Sigma^{-1}).$$
+Therefore,
+$$\log{\pi(\textbf{B}, \boldsymbol{\beta}, \sigma^2, \Sigma \mid Y_i)} \propto \sum_{i=1}^n -\frac{1}{2}\log2\pi - \log \sigma - \frac{1}{2\sigma^2}\Big(Y_i(t + 6) - \mu_i \Big)^2 +$$
+$$\sum_{i=1}^n -\frac{1}{2}\log(\det(2\pi\Sigma)) - \frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta}) - 2\log\sigma - (d+1)\log|\Sigma| - \frac{1}{2}\Sigma^{-1}.$$
+
+Using this equation, I think we could implement a similar M-H algorithm to the Example: Hierarchical Poisson Model from lecture note 9, page 45
