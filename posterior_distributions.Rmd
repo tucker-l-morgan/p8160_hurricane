@@ -54,7 +54,14 @@ $$\pi(\textbf{B}) = \prod_{i=1}^n \det(2\pi\Sigma)^{-\frac{1}{2}} \exp(-\frac{1}
 So we have the following posterior distribution, from which we can derive conditional posteriors to perform Gibbs sampling.
 
 $$\pi(\textbf{B}, \boldsymbol{\beta}, \sigma^2, \Sigma \mid Y_i) \propto \prod_{i=1}^n \frac{1}{\sqrt{2\pi}\sigma} \exp\Big\{-\frac{1}{2\sigma^2}\Big(Y_i(t+6) - \mu_i\Big)^2 \Big\}\\$$
-$$\times \prod_{i=1}^n \det(2\pi\Sigma)^{-\frac{1}{2}} \exp(-\frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta})) \times \frac{1}{\sigma^2} \times |\Sigma|^{-(d+1)} \exp(-\frac{1}{2}\Sigma^{-1})$$
+$$\times \prod_{i=1}^n \det(2\pi\Sigma)^{-\frac{1}{2}} \exp\Big(-\frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta})\Big) \times \frac{1}{\sigma^2} \times |\Sigma|^{-(d+1)} \exp(-\frac{1}{2}\Sigma^{-1})$$
+
+To find the conditional posterior distributions for Gibbs sampling, we can consider:
+$$\pi(\boldsymbol{\beta} \mid \textbf{B}, \sigma^2, \Sigma, Y_i) = \frac{\pi(\beta, \textbf{B},\sigma^2, \Sigma \mid Y_i)}{\pi(\textbf{B}, \sigma^2, \Sigma)}.$$
+
+In the equation above, $\pi(\textbf{B}, \sigma^2, \Sigma)$ only depends on $\textbf{B}, \sigma^2, \Sigma$, so we can focus only on the part of the joint posterior that depends on all four variables $\beta,\ \textbf{B},\ \sigma^2$, and $\Sigma$.
+
+$$\pi(\boldsymbol{\beta} \mid \textbf{B}, \sigma^2, \Sigma, Y_i) \propto ...$$
 
 ## Old work (I think incorrect, above is better approach)
 
