@@ -1,0 +1,51 @@
+---
+title: "P8160 - Hurricane Project"
+author: "Tucker Morgan - tlm2152"
+date: "4/26/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Given Information
+
+The following Bayesian model was suggested.  
+
+$$Y_{i}(t+6) =\beta_{0,i}+\beta_{1,i}Y_{i}(t) + \beta_{2,i}\Delta_{i,1}(t)+
+\beta_{3,i}\Delta_{i,2}(t) +\beta_{4,i}\Delta_{i,3}(t)  + \epsilon_{i}(t)$$  
+
+where $Y_{i}(t)$ the wind speed at time $t$ (i.e. 6 hours earlier),  $\Delta_{i,1}(t)$, $\Delta_{i,2}(t)$ and $\Delta_{i,3}(t)$ are the changes of latitude, longitude and wind speed between $t$ and $t+6$, and $\epsilon_{i,t}$ follows a  normal distributions with mean zero and variance $\sigma^2$, independent across $t$. 
+
+In the model,  $\boldsymbol{\beta}_{i} =  (\beta_{0,i},\beta_{1,i},...,\beta_{7,i})$ are the random coefficients associated the $i$th hurricane, we assume that 
+
+$$\boldsymbol{\beta}_{i} \sim N(\boldsymbol{\beta}, \boldsymbol{\Sigma})$$
+
+follows a multivariate normal distributions with mean $\boldsymbol{\beta}$ and covariance matrix $\Sigma$.
+
+We assume the following non-informative or weak prior distributions for $\sigma^2$, $\boldsymbol{\beta}$ and $\Sigma$.
+
+$$P(\sigma^2) \propto \frac{1}{\sigma^2};\quad P(\boldsymbol{\beta})\propto 1;\quad P(\Sigma^{-1}) \propto 
+|\Sigma|^{-(d+1)} \exp(-\frac{1}{2}\Sigma^{-1})$$
+
+$d$ is dimension of $\beta$.
+
+## Task 1:
+Let $\textbf{B} = (\boldsymbol{\beta}_1^\top,..., \boldsymbol{\beta}_n^\top)^\top$, derive the posterior distribution of the parameters $\Theta = (\textbf{B}^\top, \boldsymbol{\beta}^\top, \sigma^2, \Sigma)$.
+
+Note from given Bayesian model:
+
+$$\epsilon_i(t) = Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,1}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \stackrel{i.i.d}{\sim} N(0, \sigma^2)$$
+
+$$f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta},  \sigma^2) = \frac{1}{\sqrt{2\pi}\sigma} \exp\Big\{-\frac{1}{2\sigma^2}(Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,1}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \Big\}$$
+Therefore,
+
+$$\pi(\boldsymbol{\beta} \mid Y_i) \propto f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta},  \sigma^2) \times \pi(\boldsymbol{\beta}) \times \pi(\sigma^2)$$
+$$\Rightarrow \pi(\boldsymbol{\beta} \mid Y_i) \propto \frac{1}{\sqrt{2\pi}\sigma^3} \exp\Big\{-\frac{1}{2\sigma^2}(Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,1}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \Big\}$$
+with joint likelihood
+
+$$\pi(\boldsymbol{\beta} \mid Y_i) \propto \prod_{i=1}^n \frac{1}{\sqrt{2\pi}\sigma^3} \exp\Big\{-\frac{1}{2\sigma^2}(Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,1}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \Big\}$$
+
+$$\log \pi(\boldsymbol{\beta} \mid Y_i) \propto \sum_{i=1}^n -\frac{1}{2}\log(2\pi) - 3\log\sigma - -\frac{1}{2\sigma^2}(Y_i(t+6) - (\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,1}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t))$$
+Please, feel free to make edits or add work to this.
