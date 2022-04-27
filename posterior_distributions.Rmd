@@ -47,11 +47,11 @@ $$f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta}_i,  \sigma^2) = \frac{1}{\sqrt{2\pi}\
 
 We can find the posterior distribution for $\Theta$ by
 
-$$\pi(\textbf{B}, \boldsymbol{\beta}, \sigma^2, \Sigma \mid Y_i) \propto f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta},  \sigma^2) \times \pi(\textbf{B}) \times \pi(\boldsymbol{\beta}) \times \pi(\sigma^2) \times \pi(\Sigma),$$
+$$\pi(\textbf{B}, \boldsymbol{\beta}, \sigma^2, \Sigma \mid Y_i) \propto f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta},  \sigma^2) \times \pi(\textbf{B} \mid \boldsymbol{\beta}, \Sigma) \times \pi(\boldsymbol{\beta}) \times \pi(\sigma^2) \times \pi(\Sigma),$$
 
-where $\pi(\textbf{B})$ is the joint multivariate normal density of $\beta$,
+where $\pi(\textbf{B} \mid \boldsymbol{\beta},  \Sigma)$ is the joint multivariate normal density of $\beta$,
 
-$$\pi(\textbf{B}) = \prod_{i=1}^n \det(2\pi\Sigma)^{-\frac{1}{2}} \exp(-\frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta})).$$
+$$\pi(\textbf{B} \mid \boldsymbol{\beta},  \Sigma) = \prod_{i=1}^n \det(2\pi\Sigma)^{-\frac{1}{2}} \exp(-\frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta})).$$
 
 So we have the following posterior distribution, from which we can derive conditional posteriors to perform Gibbs sampling.
 
@@ -64,7 +64,7 @@ $$\pi(\textbf{B}, \boldsymbol{\beta}, \sigma^2, \Sigma \mid Y_i) \propto \frac{\
 To find the conditional posterior distributions for Gibbs sampling, we can consider:
 $$\pi(\boldsymbol{\beta} \mid \textbf{B}, \sigma^2, \Sigma, Y_i) = \frac{\pi(\beta, \textbf{B},\sigma^2, \Sigma \mid Y_i)}{\pi(\textbf{B}, \sigma^2, \Sigma)}.$$
 
-In the equation above, $\pi(\textbf{B}, \sigma^2, \Sigma)$ only depends on $\textbf{B}, \sigma^2, \Sigma$, so we can focus only on the part of the joint posterior that depends on all four variables $\beta,\ \textbf{B},\ \sigma^2$, and $\Sigma$.
+In the equation above, $\pi(\textbf{B}, \sigma^2, \Sigma)$ only depends on $\textbf{B}, \sigma^2, \Sigma$, so we can focus only on the part of the joint posterior that depends on all four variables $\beta,\ \textbf{B},\ \sigma^2$, and $\Sigma$. (Charly said this is the right idea, and we should have a summation term below to help with combining terms. I'm thinking we should look at the log distribution to convert products to sums.)
 
 $$\pi(\boldsymbol{\beta} \mid \textbf{B}, \sigma^2, \Sigma, Y_i) \propto \frac{1}{\sigma^2} \exp\Big\{- \frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top\Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta})\Big\}$$
 $$\propto \frac{1}{\sigma^2}\exp\Big\{-\frac{1}{2}\Big(\boldsymbol{\beta}_i^\top\Sigma^{-1}\boldsymbol{\beta}_i - \boldsymbol{\beta_i}^\top \Sigma^{-1}\boldsymbol{\beta} - \boldsymbol{\beta}^\top\Sigma^{-1}\boldsymbol{\beta}_i - \boldsymbol{\beta}^\top\Sigma^{-1}\boldsymbol{\beta}\Big)\Big\}$$
@@ -83,4 +83,4 @@ Therefore,
 $$\log{\pi(\textbf{B}, \boldsymbol{\beta}, \sigma^2, \Sigma \mid Y_i)} \propto \sum_{i=1}^n -\frac{1}{2}\log2\pi - \log \sigma - \frac{1}{2\sigma^2}\Big(Y_i(t + 6) - \mu_i \Big)^2 +$$
 $$\sum_{i=1}^n -\frac{1}{2}\log(\det(2\pi\Sigma)) - \frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta}) - 2\log\sigma - (d+1)\log|\Sigma| - \frac{1}{2}\Sigma^{-1}.$$
 
-Using this equation, I think we could implement a similar M-H algorithm to the Example: Hierarchical Poisson Model from lecture note 9, page 45
+Using this equation, I think we could implement a similar component-wise M-H algorithm to the Example: Hierarchical Poisson Model from lecture note 9, page 45. (Charly seemed to indicate that Gibbs sampling was the right approach, not component-wise M-H.)
