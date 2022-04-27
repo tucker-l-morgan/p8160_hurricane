@@ -36,10 +36,27 @@ Let $\textbf{B} = (\boldsymbol{\beta}_1^\top,..., \boldsymbol{\beta}_n^\top)^\to
 
 Note from given Bayesian model:
 
-$$\epsilon_i(t) = Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,1}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \stackrel{i.i.d}{\sim} N(0, \sigma^2)$$
+$$\epsilon_i(t) = Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,i}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \stackrel{i.i.d}{\sim} N(0, \sigma^2)$$
+$$\text{or}$$
+$$Y_i(t+6) \stackrel{i.i.d}{\sim} N(\mu_i, \sigma^2)$$
+where $\mu_i = \beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,1}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)$. Therefore,
 
-$$f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta},  \sigma^2) = \frac{1}{\sqrt{2\pi}\sigma} \exp\Big\{-\frac{1}{2\sigma^2}\Big[Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,i}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big)\Big]^2 \Big\}$$
-Therefore,
+$$f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta}_i,  \sigma^2) = \frac{1}{\sqrt{2\pi}\sigma} \exp\Big\{-\frac{1}{2\sigma^2}\Big[Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,i}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big)\Big]^2 \Big\}$$
+
+We can find the posterior distribution for $\Theta$ by
+
+$$\pi(\textbf{B}, \boldsymbol{\beta}, \sigma^2, \Sigma \mid Y_i) \propto f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta},  \sigma^2) \times \pi(\textbf{B}) \times \pi(\boldsymbol{\beta}) \times \pi(\sigma^2) \times \pi(\Sigma),$$
+
+where $\pi(\textbf{B})$ is the joint multivariate normal density of $\beta$,
+
+$$\pi(\textbf{B}) = \prod_{i=1}^n \det(2\pi\Sigma)^{-\frac{1}{2}} \exp(-\frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta})).$$
+
+So we have the following posterior distribution, from which we can derive conditional posteriors to perform Gibbs sampling.
+
+$$\pi(\textbf{B}, \boldsymbol{\beta}, \sigma^2, \Sigma \mid Y_i) \propto \prod_{i=1}^n \frac{1}{\sqrt{2\pi}\sigma} \exp\Big\{-\frac{1}{2\sigma^2}\Big(Y_i(t+6) - \mu_i\Big)^2 \Big\}\\$$
+$$\times \prod_{i=1}^n \det(2\pi\Sigma)^{-\frac{1}{2}} \exp(-\frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta})) \times \frac{1}{\sigma^2} \times |\Sigma|^{-(d+1)} \exp(-\frac{1}{2}\Sigma^{-1})$$
+
+## Old work (I think incorrect, above is better approach)
 
 $$\pi(\boldsymbol{\beta} \mid Y_i) \propto f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta},  \sigma^2) \times \pi(\boldsymbol{\beta}) \times \pi(\sigma^2)$$
 $$\Rightarrow \pi(\boldsymbol{\beta} \mid Y_i) \propto \frac{1}{\sqrt{2\pi}\sigma^3} \exp\Big\{-\frac{1}{2\sigma^2}(Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,1}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \Big\}$$
