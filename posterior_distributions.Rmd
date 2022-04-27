@@ -49,3 +49,13 @@ $$\pi(\boldsymbol{\beta} \mid Y_i) \propto \prod_{i=1}^n \frac{1}{\sqrt{2\pi}\si
 
 $$\log \pi(\boldsymbol{\beta} \mid Y_i) \propto \sum_{i=1}^n -\frac{1}{2}\log(2\pi) - 3\log\sigma - -\frac{1}{2\sigma^2}(Y_i(t+6) - (\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,1}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t))$$
 Please, feel free to make edits or add work to this.
+
+For \textbf{B}, maybe we try something like this:
+
+$$\pi(\textbf{B} \mid \boldsymbol{\beta}_i) \propto f_{\textbf{B}}(\textbf{B}\mid \boldsymbol{\beta}_i, \Sigma^{-1}) \times \pi(\boldsymbol{\beta}_i) \times \pi(\Sigma^{-1})$$
+
+Since, $\beta_i \sim N(\boldsymbol{\beta}, \Sigma)$,
+
+$$f_{\textbf{B}}(\textbf{B}\mid \boldsymbol{\beta}_i, \Sigma^{-1}) = \prod_{i=1}^n \det(2\pi\Sigma)^{-\frac{1}{2}} \exp(-\frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^\top \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta}))$$
+
+The above is the pdf for a multivariate normal distribution, but I am not sure if we use this here. My thinking is that \textbf{B} is joint multivariate normal for all independent (could be incorrect assumption) $\beta_i$. But this might actually be the distribution for $\pi(\boldsymbol{\beta}_i)$.
