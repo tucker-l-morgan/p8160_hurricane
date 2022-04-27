@@ -38,7 +38,7 @@ Note from given Bayesian model:
 
 $$\epsilon_i(t) = Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,1}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \stackrel{i.i.d}{\sim} N(0, \sigma^2)$$
 
-$$f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta},  \sigma^2) = \frac{1}{\sqrt{2\pi}\sigma} \exp\Big\{-\frac{1}{2\sigma^2}(Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,1}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \Big\}$$
+$$f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta},  \sigma^2) = \frac{1}{\sqrt{2\pi}\sigma} \exp\Big\{-\frac{1}{2\sigma^2}\Big[Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,i}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big)\Big]^2 \Big\}$$
 Therefore,
 
 $$\pi(\boldsymbol{\beta} \mid Y_i) \propto f_{Y_i(t+6)}(Y_i \mid \boldsymbol{\beta},  \sigma^2) \times \pi(\boldsymbol{\beta}) \times \pi(\sigma^2)$$
