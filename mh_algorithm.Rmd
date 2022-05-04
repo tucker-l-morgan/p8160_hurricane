@@ -1,0 +1,63 @@
+---
+title: "Metropolis-Hastings Algorithm"
+author: ""
+date: "5/4/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r importing data}
+hurr_df <- read_csv("./data/hurricane703.csv")
+
+# this list needs to be worked on more
+hurr_list <- hurr_df %>% 
+  group_by(ID) %>%
+#  mutate(lat_change = , lng_change = , wind_change = ) %>% 
+  mutate(x = as.matrix(tibble(Season, Month, Nature, time, Latitude, Longitude)),
+         y = Wind.kt) %>% 
+  select(ID, x, y) %>%  
+  group_split()
+
+# list of theta parameters
+theta <- list(
+  "beta" = c(),
+  "B" = c(),
+  sigma2 = c(),
+  sigma_m = c()
+)
+```
+
+```{r log posterior distributions}
+# log posterior of sigma^2
+log_sigma2 <- function(data, i){
+  # alpha parameter of distribution
+  alpha = 1 + sum(dim(data[[i]]$y)) / 2
+  # beta parameter of distribution
+  b = (1/2) * sum(t(data[[i]]$y - data[[i]]$x %*% t(theta$beta)) %*% diag(dim(data[[i]]$y)) %*% (data[[i]]$y - data[[i]]$x %*% t(theta$beta)))
+  # pulling sigma^2 from theta list
+  tau = theta$sigma2
+  
+  return(alpha * log(b) - log(gamma(alpha)) + (alpha - 1) * log(tau) - tau * b)
+}
+
+# log posterior of beta
+log_beta <- function(){
+  v = sum(theta$sigma_m)
+  u = sum(theta$sigma_m %*% t(theta$beta))
+  
+  return(-(1/2) * log(det(2 * pi * solve(v))) - (1/2) * t((theta$beta - solve(v) %*% u)) %*% solve(v) %*% (theta$beta - solve(v) %*% u))
+}
+
+# log posterior of B
+log_B <- function(data, i){
+  v = t(data$x[[i]]) %*% (1 / diag(theta$sigma2)) %*% data[[i]]$x + theta$sigma_m
+  u = data[[i]]$x %*% (1 / diag(theta$sigma2)) %*% data[[i]]$y + theta$sigma_m %*% t(theta$beta)
+  
+  return(-(1/2) * log(det(2 * pi * solve(v))) - (1/2) * t((theta$B - solve(v) %*% u)) %*% solve(v) %*% (theta$B - solve(v) %*% u))
+}
+```
+
