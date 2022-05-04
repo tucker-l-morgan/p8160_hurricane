@@ -16,11 +16,20 @@ hurr_df <- read_csv("./data/hurricane703.csv")
 # this list needs to be worked on more
 hurr_list <- hurr_df %>% 
   group_by(ID) %>%
-#  mutate(lat_change = , lng_change = , wind_change = ) %>% 
-  mutate(x = as.matrix(tibble(Season, Month, Nature, time, Latitude, Longitude)),
+  # create delta variables and wind lag - wind speed at time t, Y(t)
+  mutate(lat_change = c(0, diff(Latitude, lag = 1)),
+         lng_change = c(0, diff(Longitude, lag = 1)),
+         wind_change = c(0, diff(Wind.kt, lag = 1)),
+         wind_lag = lag(Wind.kt, n = 1)) %>% 
+  mutate(x = as.matrix(tibble(wind_lag, lat_change, lng_change, wind_change)),
          y = Wind.kt) %>% 
   select(ID, x, y) %>%  
   group_split()
+
+# you can extract data like this
+hurr_list[[1]]
+hurr_list[[1]]$x
+hurr_list[[1]]$y
 
 # list of theta parameters
 theta <- list(
