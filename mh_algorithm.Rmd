@@ -46,7 +46,7 @@ log_sigma2 <- function(data, i){
   # alpha parameter of distribution
   alpha = 1 + sum(dim(data[[i]]$y)) / 2
   # beta parameter of distribution
-  b = (1/2) * sum(t(data[[i]]$y - data[[i]]$x %*% t(theta$beta)) %*% diag(dim(data[[i]]$y)) %*% (data[[i]]$y - data[[i]]$x %*% t(theta$beta)))
+  b = (1/2) * sum(t(data[[i]]$y - data[[i]]$x %*% t(theta$beta)) %*% diag(length(data[[i]]$y)) %*% (data[[i]]$y - data[[i]]$x %*% t(theta$beta)))
   # pulling sigma^2 from theta list
   tau = theta$sigma2
   
