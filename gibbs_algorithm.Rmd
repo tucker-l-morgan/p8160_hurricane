@@ -12,32 +12,34 @@ library(MASS)
 ```
 
 ```{r importing data}
-hurr_df <- read_csv("./data/hurricane703.csv")
-
-# this list needs to be worked on more
-hurr_list <- hurr_df %>% 
+hurr_df <- read_csv("./data/hurricane703.csv") %>% 
   group_by(ID) %>%
   # create delta variables and wind lag - wind speed at time t, Y(t)
   mutate(lat_change = c(0, diff(Latitude, lag = 1)), # I put zero for first entry, could be NA
          lng_change = c(0, diff(Longitude, lag = 1)),
          wind_change = c(0, diff(Wind.kt, lag = 1)),
          wind_lag = lag(Wind.kt, n = 1)) %>% 
-  mutate(x = as.matrix(tibble(wind_lag, lat_change, lng_change, wind_change)),
-         y = Wind.kt) %>% 
-  select(ID, x, y) %>%  
-  group_split()
+  select(ID, lat_change, lng_change, wind_change, wind_lag, Wind.kt) %>% 
+  nest(y = Wind.kt, x = lat_change:wind_lag) %>% 
+  mutate(x = map(.x = x, .f = ~model.matrix(~., data = .x)),
+         y = map(.x = y, .f = pull))
+
+hurr_list <- list(
+  y = hurr_df$y,
+  x = hurr_df$x
+)
+
 
 # you can extract data like this
-hurr_list[[1]]
-hurr_list[[1]]$x
-hurr_list[[1]]$y
+hurr_list$x[[1]]
+hurr_list$y[[1]]
 
 # list of theta parameters
 theta <- list(
-  "beta" = c(),
-  "B" = c(),
-  sigma2 = c(),
-  sigma_m = c()
+  "beta" = matrix(data = 0, nrow = 1, ncol = 5),
+  "B" = matrix(data = 0, nrow = length(hurr_list), ncol = 5),
+  "sigma2" = c(1),
+  "sigma_m" = matrix(data = 1, nrow = 5, ncol = 5)
 )
 ```
 
@@ -68,6 +70,59 @@ log_B <- function(data, i){
   u = data[[i]]$x %*% (1 / diag(theta$sigma2)) %*% data[[i]]$y + theta$sigma_m %*% t(theta$beta)
   
   return(-(1/2) * log(det(2 * pi * solve(v))) - (1/2) * t((theta$B - solve(v) %*% u)) %*% solve(v) %*% (theta$B - solve(v) %*% u))
+}
+```
+
+```{r conditional distributions}
+beta_dist <- function(){
+  v = sum(theta$sigma_m)
+  u = sum(theta$sigma_m %*% t(theta$beta))
+  
+  mu = solve(v) %*% u
+  sigma = solve(v)
+  
+  sample = mvrnorm(n = 1, mu, sigma)
+  
+  return(sample)
+}
+
+B_dist <- function(data, i){
+  v = t(data$x[[i]]) %*% (1 / diag(theta$sigma2)) %*% data$x[[i]] + solve(theta$sigma_m)
+  u = t(data$x[[i]]) %*% (1 / diag(theta$sigma2)) %*% data$y[[i]] + solve(theta$sigma_m) %*% t(theta$beta)
+  
+  mu = solve(v) %*% u
+  sigma = solve(v)
+  
+  sample = mvrnorm(n = 1, mu, sigma)
+  return(sample)
+}
+
+beta_helper <- function(x, y, beta_i){
+  t(y - x %*% t(beta_i)) %*% (y - x %*% t(beta_i))
+}
+
+sigma2_dist <- function(data){
+  length_vec = sapply(data$y, length)
+#  beta_vec = sapply(hurr_list$x, beta_helper, y = hurr_list$y, beta_i = theta$B)
+  
+  beta_vec <- for(i in 1:)
+  
+  # alpha parameter of distribution
+  alpha = 1 + sum(length_vec) / 2
+  # beta parameter of distribution
+  b = (1/2) * sum(t(data[[i]]$y - data[[i]]$x %*% t(theta$B[i,])) %*% diag(length(data[[i]]$y)) %*% (data[[i]]$y - data[[i]]$x %*% t(theta$B[i,])))
+  
+  sample = rgamma(n = 1, shape = alpha, rate = b)
+  return(sample)
+}
+
+sigma_m_dist <- function(i){
+  mat_param <- sum(t(theta$B[i,] - theta$beta) %*% (theta$B[i,] - theta$beta) + diag(nrow = 5, ncol = 5))
+  d = 5
+  n = length(hurr_list)
+  
+  sample = rWishart(n = 1, df = d + 1 + n, Sigma = mat_param)
+  return(sample)
 }
 ```
 
