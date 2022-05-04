@@ -8,6 +8,7 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(MASS)
 ```
 
 ```{r importing data}
@@ -17,7 +18,7 @@ hurr_df <- read_csv("./data/hurricane703.csv")
 hurr_list <- hurr_df %>% 
   group_by(ID) %>%
   # create delta variables and wind lag - wind speed at time t, Y(t)
-  mutate(lat_change = c(0, diff(Latitude, lag = 1)),
+  mutate(lat_change = c(0, diff(Latitude, lag = 1)), # I put zero for first entry, could be NA
          lng_change = c(0, diff(Longitude, lag = 1)),
          wind_change = c(0, diff(Wind.kt, lag = 1)),
          wind_lag = lag(Wind.kt, n = 1)) %>% 
