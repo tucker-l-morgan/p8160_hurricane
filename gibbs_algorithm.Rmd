@@ -20,7 +20,7 @@ hurr_df <- read_csv("./data/hurricane703.csv") %>%
          lng_change = c(0, diff(Longitude, lag = 1)),
          wind_change = c(0, diff(Wind.kt, lag = 1)),
          wind_lag = lag(Wind.kt, n = 1)) %>% 
-  select(ID, lat_change, lng_change, wind_change, wind_lag, Wind.kt) %>% 
+  dplyr::select(ID, lat_change, lng_change, wind_change, wind_lag, Wind.kt) %>% 
   nest(y = Wind.kt, x = lat_change:wind_lag) %>%  
   mutate(x = map(.x = x, .f = ~model.matrix(~., data = .x)),
          y = map(.x = y, .f = pull))
@@ -161,7 +161,6 @@ sigma_m_dist <- function(beta, B){
  
  mat_param <- solve(matrix)
   
- d = 5
  n = nrow(hurr_df)
   
  sample = matrix(rWishart(n = 1, df = n, Sigma = mat_param),
@@ -211,6 +210,6 @@ ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
   geom_line(aes(ind))
 
 sigma_sum_vec <- do.call(rbind, lapply(test$sigma_m, sum))
-plot(x = sigma_sum_vec, axt = "n", type = "l")
+plot(x = sigma_sum_vec, type = "l")
 ```
 
