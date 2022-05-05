@@ -9,6 +9,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(MASS)
+library(MCMCpack)
 ```
 
 ```{r importing data}
@@ -143,7 +144,7 @@ sigma2_dist <- function(B, x, y){
   # beta parameter of distribution
   b = (1/2) * sum(beta_vec)
   
-  sample = rgamma(n = 1, shape = alpha, rate = b)
+  sample = 1 / rgamma(n = 1, shape = alpha, rate = b)
   return(sample)
 }
 
@@ -156,16 +157,16 @@ sigma_m_dist <- function(beta, B){
    
    prev_matrix <- matrix
  }
- 
  matrix <- matrix + diag(1, 5, 5)
  
  mat_param <- solve(matrix)
   
  n = nrow(hurr_df)
   
- sample = matrix(rWishart(n = 1, df = n, Sigma = mat_param),
+ sample = matrix(rWishart(n = 1, df = n + 6, Sigma = mat_param),
                  ncol = 5)
-  return(sample)
+ 
+  return(solve(sample, tol = 1e-95))
 }
 ```
 
