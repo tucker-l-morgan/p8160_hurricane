@@ -15,12 +15,15 @@ knitr::opts_chunk$set(echo = TRUE)
 To predict wind speeds, hurricane trajectories are being studied by climate scientists.  
 
 ## 1.2. Objectives
-In this report, we attempt to use the track data from 703 hurricanes in the North Atlantic area since 1950 to investigate the seasonal difference and determine if the wind speeds have grown over years. First, we will calculate the posterior distribution of four parameters $( B, \beta, \sigma^{2}, \Sigma^{-1})$ in proposed Bayesian model. Next, we will design an MCMC algorithm in R to generate the posterior distribution. Then, we will use the MCMC chain we developed to estimate the parameters, and check see how well the model fits the data.     
-Furthermore, to forecast hurricane damage and deaths, another data set containing the damages and deaths caused by 46 hurricanes in the United States will be used. We will construct a model and to determine which hurricanes traits are linked to damage and deaths.  
+In this study, we attempt to use the track data from 703 hurricanes in the North Atlantic area since 1950 to investigate the seasonal difference and determine if the wind speeds have grown over years. First, we will calculate the posterior distribution of four parameters $( B, \beta, \sigma^{2}, \Sigma^{-1})$ in proposed Bayesian model. Next, we will design an MCMC algorithm in R to generate the posterior distribution. Then, we will use the MCMC chain we developed to estimate the parameters, and check see how well the model fits the data.     
+Furthermore, to forecast hurricane damage and deaths, another data set containing the damages and deaths caused by 46 hurricanes in the United States will be used. We will construct a model and to determine which hurricanes traits are linked to damage and deaths.    
 
 # 2. Methods
-\vspace{5mm}
+
 ## 2.1. Data Cleaning and Exploratory Analysis
+In this study, there are two data sets. First one contains 703 hurricanes in the North Atlantic since 1950. It recorded the location (longitude and latitude) and maximum wind speed every 6 hours for every hurricanes. There are 8 variables and 22038 observations.  
+
+## 2.2. 
 \vspace{5mm}
 # 3. Results 
 \vspace{5mm}
