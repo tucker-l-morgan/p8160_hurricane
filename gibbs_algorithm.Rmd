@@ -75,10 +75,19 @@ log_B <- function(data, i){
 ```
 
 ```{r conditional distributions}
-beta_dist <- function(){
-  v = (theta$sigma_m)
-  u = (theta$sigma_m %*% t(theta$beta))
+beta_dist <- function(sigma, B){
   
+  v = solve(sigma) * nrow(hurr_df)
+  
+  u_matrix <- matrix(0, nrow = 5, ncol = nrow(hurr_df))
+  for(i in 1:nrow(hurr_df)){
+    
+    u_matrix[,i] = solve(sigma) %*% t(matrix(B[i,], ncol = 5))
+    
+  }
+  
+  u = rowSums(u_matrix)
+
   mu = solve(v) %*% u
   sigma = solve(v)
   
@@ -87,21 +96,21 @@ beta_dist <- function(){
   return(sample)
 }
 
-B_dist <- function(data){
+B_dist <- function(x, y, sigma2, sigma_m, beta){
   B_list <- list()
   
   for(i in 1:nrow(hurr_df)){
-    if(length(data$y[[i]]) < 2){
+    if(length(y[[i]]) < 2){
       next
     }
-    attr(data$x[[i]], which = "assign") <- NULL
-    attr(data$x[[i]], which = "dimnames") <- NULL
-    y_adj <- data$y[[i]][-1]
+    attr(x[[i]], which = "assign") <- NULL
+    attr(x[[i]], which = "dimnames") <- NULL
+    y_adj <- y[[i]][-1]
     
-    mat <- diag(theta$sigma2, nrow = length(y_adj), ncol = length(y_adj))
+    mat <- diag(sigma2, nrow = length(y_adj), ncol = length(y_adj))
     
-    u <- t(data$x[[i]]) %*% solve(a = mat) %*% y_adj + solve(theta$sigma_m) %*% t(theta$beta)
-    v <- t(data$x[[i]]) %*% solve(a = mat) %*% data$x[[i]] + solve(theta$sigma_m)
+    u <- t(x[[i]]) %*% solve(a = mat) %*% y_adj + solve(sigma_m) %*% t(beta)
+    v <- t(x[[i]]) %*% solve(a = mat) %*% x[[i]] + solve(sigma_m)
     
     mu <- solve(v) %*% u
     sigma <- solve(v)
@@ -115,20 +124,16 @@ B_dist <- function(data){
   return(B_matrix)
 }
 
-beta_helper <- function(x, y, beta_i){
-  t(y - x %*% t(beta_i)) %*% (y - x %*% t(beta_i))
-}
-
-sigma2_dist <- function(data){
-  length_vec = sapply(data$y, length)
+sigma2_dist <- function(B, x, y){
+  length_vec = sapply(y, length)
 
   beta_vec <- c()
   for(i in 1:nrow(hurr_df)){
-    attr(data$x[[i]], which = "assign") <- NULL
-    attr(data$x[[i]], which = "dimnames") <- NULL
-    y_adj <- data$y[[i]][-1]
+    attr(x[[i]], which = "assign") <- NULL
+    attr(x[[i]], which = "dimnames") <- NULL
+    y_adj <- y[[i]][-1]
     
-    res <- t(y_adj - data$x[[i]] %*% theta$B[i,]) %*% diag(length(y_adj)) %*% (y_adj - data$x[[i]] %*% (theta$B[i,]))
+    res <- t(y_adj - x[[i]] %*% B[i,]) %*% diag(length(y_adj)) %*% (y_adj - x[[i]] %*% (B[i,]))
     
     beta_vec[i] <- res
   }
@@ -142,12 +147,12 @@ sigma2_dist <- function(data){
   return(sample)
 }
 
-sigma_m_dist <- function(){
+sigma_m_dist <- function(beta, B){
  prev_matrix <- matrix(0, nrow = 5, ncol = 5)
  
  for(i in 1:nrow(hurr_df)){
    
-   matrix <- prev_matrix + t(theta$B[i,] - theta$beta) %*% (theta$B[i,] - theta$beta) + diag(nrow = 5, ncol = 5)
+   matrix <- prev_matrix + t(B[i,] - beta) %*% (B[i,] - beta) + diag(nrow = 5, ncol = 5)
    
    prev_matrix <- matrix
  }
@@ -159,8 +164,53 @@ sigma_m_dist <- function(){
  d = 5
  n = nrow(hurr_df)
   
- sample = rWishart(n = 1, df = d + 1 + n, Sigma = mat_param)
+ sample = matrix(rWishart(n = 1, df = n, Sigma = mat_param),
+                 ncol = 5)
   return(sample)
 }
+```
+
+```{r gibbs sampling function}
+gibbs_fun <- function(iter, start, data){
+  beta_list <- list()
+  sigma_list <- list()
+  sigma2_list <- list()
+  B_list <- list()
+  
+  beta_list[[1]] <- start$beta
+  sigma_list[[1]] <- start$sigma_m
+  sigma2_list[[1]] <- start$sigma2
+  B_list[[1]] <- theta$B
+  
+  for (i in 2:iter){
+    #browser()
+    beta_list[[i]] <- matrix(beta_dist(sigma = sigma_list[[i-1]], B = B_list[[i-1]]), ncol = 5)
+    sigma_list[[i]] <- sigma_m_dist(beta = matrix(beta_list[[i]], ncol = 5), B = B_list[[i-1]])
+    sigma2_list[[i]] <- sigma2_dist(B = B_list[[i-1]], x = data$x, y = data$y)
+    B_list[[i]] <- B_dist(x = data$x, y = data$y, sigma2 = sigma2_list[[i]],
+                          sigma_m = sigma_list[[i]], beta = matrix(beta_list[[i]], ncol = 5))
+  }
+  
+  return(list(beta = beta_list, sigma_m = sigma_list,
+              sigma2 = sigma2_list, B = B_list))
+  
+}
+
+test <- gibbs_fun(iter = 500, start = theta, data = hurr_list)
+sigma2_vec <- do.call(rbind, test$sigma2)
+plot(x = sigma2_vec, xaxt = "n", type = "l")
+acf(sigma2_vec, pl = TRUE)
+
+beta_vec <- data.frame(do.call(rbind, test$beta)) %>% 
+  rename(beta1 = 1, beta2 = 2, beta3 = 3, beta4 = 4, beta5 = 5) %>% 
+  pivot_longer(cols = beta1:beta5, names_to = "beta", values_to = "estimate") %>% 
+  group_by(beta) %>% 
+  mutate(ind = c(1:500))
+
+ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
+  geom_line(aes(ind))
+
+sigma_sum_vec <- do.call(rbind, lapply(test$sigma_m, sum))
+plot(x = sigma_sum_vec, axt = "n", type = "l")
 ```
 
