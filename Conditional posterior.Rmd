@@ -1,0 +1,49 @@
+---
+title: "Conditional posterior distributions"
+author: "Wen Cheng"
+date: "5/5/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## For $\sigma^{2}$
+Let $\iota = \frac{1}{\sigma^{2}}$, then $$(\iota|\beta, B, \Sigma^{-1}, Y) \propto \iota^{1+\frac{\sum_{i = 1}^{n}m_i}{2}} exp(-\iota \times \frac{1}{2}\sum_{i = 1}^{n}(Y_i - X_i\beta_i^{T})^{T}I^{-1}(Y_i - X_i\beta_i^{T} )$$
+Thus, $\iota$ is from gamma distribution
+$$\iota \sim \mathcal \Gamma(2+\frac{\sum_{i = 1}^{n}m_i}{2},  \frac{1}{2}\sum_{i = 1}^{n}(Y_i - X_i\beta_i^{T})(Y_i - X_i\beta_i^{T}) $$
+
+## For B
+\begin{align}
+\pi (B| \beta, \sigma^{2},\Sigma^{-1}, Y) 
+& \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} \left[ (Y_i - X_i\beta_i^{T})^{T}(\sigma^{2}I)^{-1}(Y_i - X_i\beta_i^{T})+(\beta_i - \beta)\Sigma^{-1}(\beta_1 - \beta)^{T} \right]) \\
+& \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} \left[ \beta_i(X_i^{T}(\sigma^{2}I)^{-1}X_i + \Sigma^{-1})\beta_i^{T} - 2\beta_i(X_i(\sigma^{2}I)^{-1})Y_i + \Sigma^{-1}\beta^{T} \right] )
+\end{align}
+Let $V_i = X_i^{T}(\sigma^{2}I)^{-1})X_i + \Sigma^{-1}$, and $U_i = X_i(\sigma^{2}I)^{-1})Y_i + \Sigma^{-1}\beta^{T}$, then
+$$ (\beta_i| \beta, \sigma^{2},\Sigma^{-1}, Y) \sim \mathcal MVN(V_i^{-1}U_i, V_i^{-1}) $$
+
+## For $\beta$
+\begin{align}
+\pi(\beta| B, \sigma^{2},\Sigma^{-1}, Y) 
+& \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} (\beta_i - \beta)\Sigma^{-1}(\beta_1 - \beta)^{T})\\
+& \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} \left[ \beta \Sigma^{-1}\beta^{T} - 2\beta \Sigma^{-1} \beta_i^{T} \right] )
+\end{align}
+Let $V = n \Sigma^{-1}, U = \sum_{i = 1}^{n} \beta_i^{T}$, then
+$$ (\beta| B, \sigma^{2},\Sigma^{-1}, Y) \sim \mathcal MVN(V^{-1}U, V^{-1}) $$
+
+
+## For $\Sigma^{-1}$
+\begin{align}
+\pi(\Sigma^{-1}| \beta, B, \sigma^{2}, Y) 
+& \propto |\Sigma|^{-(d+1)}exp(-\frac{1}{2}tr(\Sigma^{-1})|\Sigma|^{-\frac{n}{2}} exp(-\frac{1}{2}\sum_{i = 1}^{n} (\beta_i - \beta)\Sigma^{-1}(\beta_1 - \beta)^{T})\\
+& \propto |\Sigma|^{-(d+1+\frac{n}{2})}exp(-\frac{1}{2} \left[ tr(\Sigma^{-1}) + tr((\beta_i - \beta)\Sigma^{-1}(\beta_1 - \beta)^{T}) \right] \\
+& \propto |\Sigma|^\frac{-(d+1+n+d+1)}{2} exp(-\frac{1}{2} tr( \left[ I + \sum_{i = 1}^{n}(\beta_i - \beta)^{T}(\beta_i - \beta) \right] \Sigma^{-1}))
+\end{align}
+Thus,
+$$ \Sigma \sim \mathcal W_d^{-1} (\psi, v)$$
+&nbsp; &nbsp; where $v = d+1+n$, and $\psi = I + \sum_{i = 1}^{n}(\beta_i - \beta)^{T}(\beta_i - \beta)$.   
+&nbsp;    
+Accordingly,
+$$ \Sigma^{-1} \sim \mathcal W_d(V, v) $$
+&nbsp; &nbsp; where $V = \psi^{-1}$.
