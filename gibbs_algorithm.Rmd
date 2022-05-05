@@ -13,7 +13,8 @@ library(MCMCpack)
 ```
 
 ```{r importing data}
-hurr_df <- read_csv("./data/hurricane703.csv") %>% 
+hurr_df <- read_csv("./data/hurricane703.csv") %>%
+  drop_na() %>% 
   group_by(ID) %>% 
   filter(n() > 1) %>% 
   # create delta variables and wind lag - wind speed at time t, Y(t)
@@ -38,14 +39,18 @@ hurr_list$y[[1]]
 
 # list of theta parameters
 theta <- list(
-  "beta" = matrix(data = 0, nrow = 1, ncol = 5),
-  "B" = matrix(data = 0, nrow = nrow(hurr_df), ncol = 5),
+  "beta" = list("beta" = matrix(data = 1, nrow = 1, ncol = 5),
+                "mu" = 0,
+                "sigma" = 0),
+  "B" = list(matrix(data = 1, nrow = nrow(hurr_df), ncol = 5),
+             "mu" = 0,
+             "sigma" = 0),
   "sigma2" = c(3),
   "sigma_m" = matrix(data = 1, nrow = 5, ncol = 5) + diag(1, 5, 5)
 )
 ```
 
-```{r log posterior distributions}
+```{r log posterior distributions, eval = FALSE}
 # log posterior of sigma^2
 log_sigma2 <- function(data, i){
   # alpha parameter of distribution
@@ -77,29 +82,32 @@ log_B <- function(data, i){
 
 ```{r conditional distributions}
 beta_dist <- function(sigma, B){
-  
-  v = solve(sigma) * nrow(hurr_df)
+  # sigma stored as inverse
+  v = nrow(hurr_df) * sigma
   
   u_matrix <- matrix(0, nrow = 5, ncol = nrow(hurr_df))
   for(i in 1:nrow(hurr_df)){
     
-    u_matrix[,i] = solve(sigma) %*% t(matrix(B[i,], ncol = 5))
+    u_matrix[,i] = sigma %*% t(matrix(B[i,], ncol = 5))
     
   }
   
   u = rowSums(u_matrix)
 
-  mu = solve(v) %*% u
-  sigma = solve(v)
+  mu = (solve(sigma, tol = 1e-95) / nrow(hurr_df)) %*% matrix(u, nrow = 5)
+  sigma = solve(sigma, tol = 1e-95) / nrow(hurr_df)
   
   sample = mvrnorm(n = 1, mu, sigma)
   
-  return(sample)
+  return(list("beta" = sample,
+              "mu" = mu,
+              "sigma" = sigma))
 }
 
 B_dist <- function(x, y, sigma2, sigma_m, beta){
   B_list <- list()
   
+  v_list <- list()
   for(i in 1:nrow(hurr_df)){
     if(length(y[[i]]) < 2){
       next
@@ -110,11 +118,12 @@ B_dist <- function(x, y, sigma2, sigma_m, beta){
     
     mat <- diag(sigma2, nrow = length(y_adj), ncol = length(y_adj))
     
-    u <- t(x[[i]]) %*% solve(a = mat) %*% y_adj + solve(sigma_m) %*% t(beta)
-    v <- t(x[[i]]) %*% solve(a = mat) %*% x[[i]] + solve(sigma_m)
+    u <- t(x[[i]]) %*% solve(mat, tol = 1e-95) %*% y_adj + sigma_m %*% t(beta)
+    v <- t(x[[i]]) %*% solve(mat, tol = 1e-95) %*% x[[i]] + sigma_m
     
-    mu <- solve(v) %*% u
-    sigma <- solve(v)
+    mu <- solve(v, tol = 1e-95) %*% u
+    sigma <- solve(v, tol = 1e-95)
+    v_list[[i]] <- v
     
     B_list[[i]] <- mvrnorm(n = 1, mu, sigma)
     
@@ -122,7 +131,10 @@ B_dist <- function(x, y, sigma2, sigma_m, beta){
   
   B_matrix <- do.call(rbind, B_list)
   
-  return(B_matrix)
+  return(list("B" = B_matrix,
+              "mu" = mu,
+              "v" = v_list))
+  
 }
 
 sigma2_dist <- function(B, x, y){
@@ -140,11 +152,11 @@ sigma2_dist <- function(B, x, y){
   }
   
   # alpha parameter of distribution
-  alpha = 1 + sum(length_vec) / 2
+  alpha = sum(length_vec) / 2
   # beta parameter of distribution
   b = (1/2) * sum(beta_vec)
   
-  sample = 1 / rgamma(n = 1, shape = alpha, rate = b)
+  sample = rinvgamma(n = 1, shape = alpha, scale = b)
   return(sample)
 }
 
@@ -153,25 +165,34 @@ sigma_m_dist <- function(beta, B){
  
  for(i in 1:nrow(hurr_df)){
    
-   matrix <- prev_matrix + t(B[i,] - beta) %*% (B[i,] - beta) + diag(nrow = 5, ncol = 5)
+   matrix <- t(B[i,] - beta) %*% (B[i,] - beta) + prev_matrix
    
    prev_matrix <- matrix
  }
  matrix <- matrix + diag(1, 5, 5)
  
- mat_param <- solve(matrix)
+ #mat_param <- solve(matrix)
   
  n = nrow(hurr_df)
-  
- sample = matrix(rWishart(n = 1, df = n + 6, Sigma = mat_param),
-                 ncol = 5)
  
-  return(solve(sample, tol = 1e-95))
+ sample = matrix(riwish(v = n + 6, S = matrix),
+                 ncol = 5)
+  
+ #sample = matrix(rWishart(n = 1, df = n + 6, Sigma = mat_param),
+ #                ncol = 5)
+ 
+  return(sample)
 }
 ```
 
+```{r conditional distributions 2}
+beta_dist
+```
+
+
 ```{r gibbs sampling function}
 gibbs_fun <- function(iter, start, data){
+  set.seed(052022)
   beta_list <- list()
   sigma_list <- list()
   sigma2_list <- list()
@@ -184,11 +205,11 @@ gibbs_fun <- function(iter, start, data){
   
   for (i in 2:iter){
     #browser()
-    beta_list[[i]] <- matrix(beta_dist(sigma = sigma_list[[i-1]], B = B_list[[i-1]]), ncol = 5)
-    sigma_list[[i]] <- sigma_m_dist(beta = matrix(beta_list[[i]], ncol = 5), B = B_list[[i-1]])
-    sigma2_list[[i]] <- sigma2_dist(B = B_list[[i-1]], x = data$x, y = data$y)
+    beta_list[[i]] <- beta_dist(sigma = sigma_list[[i-1]], B = B_list[[i-1]][[1]])
+    sigma_list[[i]] <- sigma_m_dist(beta = matrix(beta_list[[i]][[1]], ncol = 5), B = B_list[[i-1]][[1]])
+    sigma2_list[[i]] <- sigma2_dist(B = B_list[[i-1]][[1]], x = data$x, y = data$y)
     B_list[[i]] <- B_dist(x = data$x, y = data$y, sigma2 = sigma2_list[[i]],
-                          sigma_m = sigma_list[[i]], beta = matrix(beta_list[[i]], ncol = 5))
+                          sigma_m = sigma_list[[i]], beta = matrix(beta_list[[i]][[1]], ncol = 5))
   }
   
   return(list(beta = beta_list, sigma_m = sigma_list,
@@ -196,7 +217,7 @@ gibbs_fun <- function(iter, start, data){
   
 }
 
-test <- gibbs_fun(iter = 500, start = theta, data = hurr_list)
+test <- gibbs_fun(iter = 1000, start = theta, data = hurr_list)
 sigma2_vec <- do.call(rbind, test$sigma2)
 plot(x = sigma2_vec, xaxt = "n", type = "l")
 acf(sigma2_vec, pl = TRUE)
@@ -205,7 +226,7 @@ beta_vec <- data.frame(do.call(rbind, test$beta)) %>%
   rename(beta1 = 1, beta2 = 2, beta3 = 3, beta4 = 4, beta5 = 5) %>% 
   pivot_longer(cols = beta1:beta5, names_to = "beta", values_to = "estimate") %>% 
   group_by(beta) %>% 
-  mutate(ind = c(1:500))
+  mutate(ind = c(1:100))
 
 ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
   geom_line(aes(ind))
