@@ -1,0 +1,28 @@
+---
+title: "P8160 - Hurricane Project Report"
+author: "Wenbo Group#3"
+date: "5/5/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Introduction
+
+## 1.1. Background
+
+## 1.2. Objectives
+\vspace{5mm}
+# 2. Methods
+\vspace{5mm}
+## 2.1. Data Cleaning and Exploratory Analysis
+\vspace{5mm}
+# 3. Results 
+\vspace{5mm}
+# 4. Discussion 
+\vspace{5mm}
+## 4.1. Limitations
+\vspace{5mm}
+# References 
