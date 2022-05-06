@@ -190,7 +190,7 @@ beta_dist
 ```
 
 
-```{r gibbs sampling function}
+```{r gibbs sampling function, error = TRUE}
 gibbs_fun <- function(iter, start, data){
   set.seed(052022)
   beta_list <- list()
