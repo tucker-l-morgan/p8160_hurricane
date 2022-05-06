@@ -202,7 +202,7 @@ gibbs_fun <- function(iter, start, data){
   sigma_list[[1]] <- start$sigma_m
   sigma2_list[[1]] <- start$sigma2
   B_list[[1]] <- theta$B
-  
+  tryCatch(expr = {
   for (i in 2:iter){
     #browser()
     beta_list[[i]] <- beta_dist(sigma = sigma_list[[i-1]], B = B_list[[i-1]][[1]])
@@ -211,12 +211,15 @@ gibbs_fun <- function(iter, start, data){
     B_list[[i]] <- B_dist(x = data$x, y = data$y, sigma2 = sigma2_list[[i]],
                           sigma_m = sigma_list[[i]], beta = matrix(beta_list[[i]][[1]], ncol = 5))
   }
-  
+  },
+  error = function(e){print(e)},
+  finally = list(beta = beta_list, sigma_m = sigma_list,
+              sigma2 = sigma2_list, B = B_list)
+  )
   return(list(beta = beta_list, sigma_m = sigma_list,
               sigma2 = sigma2_list, B = B_list))
   
 }
-
 test <- gibbs_fun(iter = 1000, start = theta, data = hurr_list)
 sigma2_vec <- do.call(rbind, test$sigma2)
 plot(x = sigma2_vec, xaxt = "n", type = "l")
