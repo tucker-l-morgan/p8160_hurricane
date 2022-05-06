@@ -12,11 +12,11 @@ knitr::opts_chunk$set(echo = TRUE)
 # 1. Introduction
 
 ## 1.1. Background
-To predict wind speeds, hurricane trajectories are being studied by climate scientists.  
+Hurricanes are dangerous and can cause major damage from storm surge, wind damage, rip currents and flooding. They can happen along any U.S. coast or in any territory in the Atlantic or Pacific oceans. The amount of damage depends on the strength of a storm and what it hits. High winds are one of the primary causes of hurricane-inflicted loss of life and property damage. For better planning and prevention ahead to secure people from destructive hurricanes, it is extremely important and necessary to explore trajectories of hurricanes and predict each hurricane's wind speed.
 
 ## 1.2. Objectives
-In this study, we attempt to use the track data from 703 hurricanes in the North Atlantic area since 1950 to investigate the seasonal difference and determine if the wind speeds have grown over years. First, we will calculate the posterior distribution of four parameters $( B, \beta, \sigma^{2}, \Sigma^{-1})$ in proposed Bayesian model. Next, we will design an MCMC algorithm in R to generate the posterior distribution. Then, we will use the MCMC chain we developed to estimate the parameters, and check see how well the model fits the data.     
-Furthermore, to forecast hurricane damage and deaths, another data set containing the damages and deaths caused by 46 hurricanes in the United States will be used. We will construct a model and to determine which hurricanes traits are linked to damage and deaths.    
+In this study, two data sets were explored.In the first part, we attempted to use the track data of 703 hurricanes in the North Atlantic area since 1950 to explore the seasonal differences and if there is any evidence showing that the hurricane wind speed has been increasing over years. First, we calculated the posterior distribution of four parameters $( B, \beta, \sigma^{2}, \Sigma^{-1})$ in proposed Bayesian model. Next, we designed an MCMC algorithm to generate the posterior distribution. Then, we used the MCMC chain we developed to estimate the parameters, and checked to see how well the model fits the data.     
+Furthermore, in order to forecast hurricane damage and deaths, another data set containing the damages and deaths caused by 46 hurricanes in the United States were used. We constructed a model and to determine which traits of hurricanes are more associated to damage and deaths.   
 
 # 2. Methods
 
