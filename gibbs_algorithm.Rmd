@@ -35,21 +35,53 @@ hurr_list <- list(
 
 
 # you can extract data like this
-hurr_list$x[[1]]
-hurr_list$y[[1]]
+#hurr_list$x[[1]]
+#hurr_list$y[[1]]
 
 # list of theta parameters
 theta <- list(
   "beta" = list("beta" = matrix(data = 0, nrow = 1, ncol = 5),
                 "mu" = 0,
                 "sigma" = 0),
-  "B" = list(matrix(data = 0, nrow = nrow(hurr_df), ncol = 5),
+  "B" = list(matrix(data = 0, nrow = length(train_list$x), ncol = 5),
              "mu" = 0,
              "sigma" = 0),
   "sigma2" = c(1),
   "sigma_m" = matrix(data = .5, nrow = 5, ncol = 5) + diag(.5, 5, 5)
 )
 ```
+
+```{r training test}
+new_df <- hurr_df %>% 
+  filter(n() > 5)
+new_list <- list(
+  y = hurr_df$y,
+  x = hurr_df$x
+)
+
+train_list <- list(y = list(), x = list())
+test_list <- list(y = list(), x = list())
+
+for  (i in 1:nrow(hurr_df)) {
+  y <- new_list$y[[i]][-1]
+  x <- new_list$x[[i]]
+  m <- length(y)
+  
+  ntrain <- 0.8 * m
+  ntest <- m - ntrain
+  
+  train.y <- y[1:ntrain]
+  train.x <- x[1:ntrain,]
+  train_list$y[[i]] <- train.y
+  train_list$x[[i]] <- train.x
+  
+  test.y <- y[(ntrain + 1):m]
+  test.x <- x[(ntrain + 1):m,]
+  test_list$y[[i]] <- test.y
+  test_list$x[[i]] <- test.x
+}
+```
+
 
 ```{r log posterior distributions, eval = FALSE}
 # log posterior of sigma^2
@@ -82,10 +114,10 @@ log_B <- function(data, i){
 ```
 
 ```{r conditional distributions}
-beta_dist <- function(sigma, B){
+beta_dist <- function(sigma, B, n){
   # sigma stored as inverse
-  u_matrix <- matrix(0, nrow = 5, ncol = nrow(hurr_df))
-  for(i in 1:nrow(hurr_df)){
+  u_matrix <- matrix(0, nrow = 5, ncol = n)
+  for(i in 1:n){
     
     u_matrix[,i] = sigma %*% t(matrix(B[i,], ncol = 5))
     
@@ -93,8 +125,8 @@ beta_dist <- function(sigma, B){
   
   u = rowSums(u_matrix)
 
-  mu = (solve(sigma, tol = 1e-95) / nrow(hurr_df)) %*% matrix(u, nrow = 5)
-  sigma = psych::cor.smooth(solve(sigma, tol = 1e-95) / nrow(hurr_df))
+  mu = (solve(sigma, tol = 1e-95) / n) %*% matrix(u, nrow = 5)
+  sigma = psych::cor.smooth(solve(sigma, tol = 1e-95) / n)
   
   sample = mvrnorm(n = 1, mu, sigma)
   
@@ -104,16 +136,17 @@ beta_dist <- function(sigma, B){
 }
 
 B_dist <- function(x, y, sigma2, sigma_m, beta){
+  n <- length(x)
   B_list <- list()
   
   v_list <- list()
-  for(i in 1:nrow(hurr_df)){
-    if(length(y[[i]]) < 2){
-      next
-    }
-    attr(x[[i]], which = "assign") <- NULL
+  for(i in 1:n){
+    #if(length(y[[i]]) < 2){
+    #  next
+    #}
+    attr(x, which = "assign") <- NULL
     attr(x[[i]], which = "dimnames") <- NULL
-    y_adj <- y[[i]][-1]
+    y_adj <- y[[i]]
     
     mat <- diag(sigma2, nrow = length(y_adj), ncol = length(y_adj))
     
@@ -137,16 +170,17 @@ B_dist <- function(x, y, sigma2, sigma_m, beta){
 }
 
 sigma2_dist <- function(B, x, y){
+  n <- length(x)
   length_vec = sapply(y, length)
 
   beta_vec <- c()
-  for(i in 1:nrow(hurr_df)){
+  for(i in 1:n){
     attr(x[[i]], which = "assign") <- NULL
     attr(x[[i]], which = "dimnames") <- NULL
-    y_adj <- y[[i]][-1]
+    y_adj <- y[[i]]
     
     #res <- t(y_adj - x[[i]] %*% B[i,]) %*% diag(length(y_adj)) %*% (y_adj - x[[i]] %*% (B[i,]))
-    res <- sum((y_adj - (x[[i]] %*% B[i,]))^2)
+    res <- sum((y_adj - ((x[[i]] %*% B[i,]))^2))
     
     beta_vec[i] <- res
   }
@@ -160,10 +194,10 @@ sigma2_dist <- function(B, x, y){
   return(sample)
 }
 
-sigma_m_dist <- function(beta, B){
+sigma_m_dist <- function(beta, B, n){
  prev_matrix <- matrix(0, nrow = 5, ncol = 5)
  
- for(i in 1:nrow(hurr_df)){
+ for(i in 1:n){
    
    matrix <- t(B[i,] - beta) %*% (B[i,] - beta) + prev_matrix
    
@@ -172,8 +206,6 @@ sigma_m_dist <- function(beta, B){
  matrix <- matrix + diag(1, 5, 5)
  
  #mat_param <- solve(matrix)
-  
- n = nrow(hurr_df)
  
  # output is covariance matrix
  sample = matrix(riwish(v = n + 6, S = matrix),
@@ -188,7 +220,9 @@ sigma_m_dist <- function(beta, B){
 
 ```{r gibbs sampling function, error = TRUE}
 gibbs_fun <- function(iter, start, data){
+  
   set.seed(052022)
+  n <- length(data$x)
   beta_list <- list()
   sigma_list <- list()
   sigma2_list <- list()
@@ -202,8 +236,8 @@ gibbs_fun <- function(iter, start, data){
   tryCatch(expr = {
   for (i in 2:iter){
     #browser()
-    beta_list[[i]] <- beta_dist(sigma = sigma_list[[i-1]], B = B_list[[i-1]][[1]])
-    sigma_list[[i]] <- sigma_m_dist(beta = matrix(beta_list[[i]][[1]], ncol = 5), B = B_list[[i-1]][[1]])
+    beta_list[[i]] <- beta_dist(sigma = sigma_list[[i-1]], B = B_list[[i-1]][[1]], n = n)
+    sigma_list[[i]] <- sigma_m_dist(beta = matrix(beta_list[[i]][[1]], ncol = 5), B = B_list[[i-1]][[1]], n = n)
     sigma2_list[[i]] <- sigma2_dist(B = B_list[[i-1]][[1]], x = data$x, y = data$y)
     B_list[[i]] <- B_dist(x = data$x, y = data$y, sigma2 = sigma2_list[[i]],
                           sigma_m = sigma_list[[i]], beta = matrix(beta_list[[i]][[1]], ncol = 5))
@@ -217,7 +251,8 @@ gibbs_fun <- function(iter, start, data){
               sigma2 = sigma2_list, B = B_list))
   
 }
-test <- gibbs_fun(iter = 1000, start = theta, data = hurr_list)
+#test <- gibbs_fun(iter = 1000, start = theta, data = hurr_list)
+train_res <- gibbs_fun(iter = 10, start = theta, data = train_list)
 ```
 
 ```{r result visualizations}
