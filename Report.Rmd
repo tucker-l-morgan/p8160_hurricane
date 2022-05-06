@@ -23,12 +23,21 @@ Furthermore, to forecast hurricane damage and deaths, another data set containin
 ## 2.1. Data Cleaning and Exploratory Analysis
 In this study, there are two data sets. First one contains 703 hurricanes in the North Atlantic since 1950. It recorded the location (longitude and latitude) and maximum wind speed every 6 hours for every hurricanes. There are 8 variables and 22038 observations.  
 
-## 2.2. 
+The second data set contains the damages and deaths caused by 46 hurricanes in the United States. There are 14 variables and 43 observations. 
+
+## 2.2. Posterior Distribution
 \vspace{5mm}
+
+## 2.3. Gibbs Sampling Algorithm
+\vspace{5mm}
+
 # 3. Results 
 \vspace{5mm}
+
 # 4. Discussion 
 \vspace{5mm}
+
 ## 4.1. Limitations
 \vspace{5mm}
+
 # References 
