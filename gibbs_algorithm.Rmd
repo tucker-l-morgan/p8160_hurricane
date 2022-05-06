@@ -68,7 +68,7 @@ log_beta <- function(){
   v = sum(theta$sigma_m)
   u = sum(theta$sigma_m %*% t(theta$beta))
   
-  return(-(1/2) * log(det(2 * pi * solve(v))) - (1/2) * t((theta$beta - solve(v) %*% u)) %*% solve(v) %*% (theta$beta - solve(v) %*% u))
+  return(-(1/2) * log(det(2 * pi * solve(v, tol = 1e-95))) - (1/2) * t((theta$beta - solve(v, tol = 1e-95) %*% u)) %*% solve(v, tol = 1e-95) %*% (theta$beta - solve(v, tol = 1e-95) %*% u))
 }
 
 # log posterior of B
@@ -76,15 +76,13 @@ log_B <- function(data, i){
   v = t(data$x[[i]]) %*% (1 / diag(theta$sigma2)) %*% data[[i]]$x + theta$sigma_m
   u = data[[i]]$x %*% (1 / diag(theta$sigma2)) %*% data[[i]]$y + theta$sigma_m %*% t(theta$beta)
   
-  return(-(1/2) * log(det(2 * pi * solve(v))) - (1/2) * t((theta$B - solve(v) %*% u)) %*% solve(v) %*% (theta$B - solve(v) %*% u))
+  return(-(1/2) * log(det(2 * pi * solve(v, tol = 1e-95))) - (1/2) * t((theta$B - solve(v, tol = 1e-95) %*% u)) %*% solve(v, tol = 1e-95) %*% (theta$B - solve(v, tol = 1e-95) %*% u))
 }
 ```
 
 ```{r conditional distributions}
 beta_dist <- function(sigma, B){
   # sigma stored as inverse
-  v = nrow(hurr_df) * sigma
-  
   u_matrix <- matrix(0, nrow = 5, ncol = nrow(hurr_df))
   for(i in 1:nrow(hurr_df)){
     
@@ -146,7 +144,8 @@ sigma2_dist <- function(B, x, y){
     attr(x[[i]], which = "dimnames") <- NULL
     y_adj <- y[[i]][-1]
     
-    res <- t(y_adj - x[[i]] %*% B[i,]) %*% diag(length(y_adj)) %*% (y_adj - x[[i]] %*% (B[i,]))
+    #res <- t(y_adj - x[[i]] %*% B[i,]) %*% diag(length(y_adj)) %*% (y_adj - x[[i]] %*% (B[i,]))
+    res <- sum((y_adj - (x[[i]] %*% B[i,]))^2)
     
     beta_vec[i] <- res
   }
@@ -223,7 +222,7 @@ gibbs_fun <- function(iter, start, data){
 }
 test <- gibbs_fun(iter = 1000, start = theta, data = hurr_list)
 # the following code reproduced error for me in B_dist function
-B_dist(hurr_list$x, hurr_list$y, test$sigma2[[144]], test$sigma_m[[144]], matrix(test$beta[[144]]$beta, ncol = 5))
+#B_dist(hurr_list$x, hurr_list$y, test$sigma2[[144]], test$sigma_m[[144]], matrix(test$beta[[144]]$beta, ncol = 5))
 ```
 
 ```{r result visualizations}
@@ -250,8 +249,7 @@ ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
 # zooming in on end of graph
 ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
   geom_line(aes(ind)) +
-  coord_cartesian(xlim = c(length(beta_res_list) - 20, length(beta_res_list)),
-                  ylim = c(-5, 5))
+  coord_cartesian(xlim = c(0, length(beta_res_list)))
 
 # visualizing sigma2 and sigma values
 sigma2_vec <- do.call(rbind, test$sigma2)
