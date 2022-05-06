@@ -202,6 +202,7 @@ gibbs_fun <- function(iter, start, data){
   sigma_list[[1]] <- start$sigma_m
   sigma2_list[[1]] <- start$sigma2
   B_list[[1]] <- theta$B
+  # added code to catch data before error
   tryCatch(expr = {
   for (i in 2:iter){
     #browser()
@@ -221,6 +222,9 @@ gibbs_fun <- function(iter, start, data){
   
 }
 test <- gibbs_fun(iter = 1000, start = theta, data = hurr_list)
+# the following code reproduced error for me in B_dist function
+B_dist(hurr_list$x, hurr_list$y, test$sigma2[[144]], test$sigma_m[[144]], matrix(test$beta[[144]]$beta, ncol = 5))
+
 sigma2_vec <- do.call(rbind, test$sigma2)
 plot(x = sigma2_vec, xaxt = "n", type = "l")
 acf(sigma2_vec, pl = TRUE)
