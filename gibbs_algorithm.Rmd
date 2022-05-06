@@ -224,19 +224,39 @@ gibbs_fun <- function(iter, start, data){
 test <- gibbs_fun(iter = 1000, start = theta, data = hurr_list)
 # the following code reproduced error for me in B_dist function
 B_dist(hurr_list$x, hurr_list$y, test$sigma2[[144]], test$sigma_m[[144]], matrix(test$beta[[144]]$beta, ncol = 5))
+```
 
-sigma2_vec <- do.call(rbind, test$sigma2)
-plot(x = sigma2_vec, xaxt = "n", type = "l")
-acf(sigma2_vec, pl = TRUE)
-
-beta_vec <- data.frame(do.call(rbind, test$beta)) %>% 
+```{r result visualizations}
+# function to extract beta values from gibbs output
+beta_compiler <- function(list){
+  beta_res_list <- list()
+  
+  for (i in 1:length(list)){
+    beta_res_list[[i]] <- list[[i]]$beta
+  }
+  
+  return(beta_res_list)
+}
+# visualizing beta values
+beta_res_list <- beta_compiler(list = test$beta)
+beta_vec <- data.frame(do.call(rbind, beta_res_list)) %>% 
   rename(beta1 = 1, beta2 = 2, beta3 = 3, beta4 = 4, beta5 = 5) %>% 
   pivot_longer(cols = beta1:beta5, names_to = "beta", values_to = "estimate") %>% 
   group_by(beta) %>% 
-  mutate(ind = c(1:100))
+  mutate(ind = c(1:length(beta_res_list)))
 
 ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
   geom_line(aes(ind))
+# zooming in on end of graph
+ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
+  geom_line(aes(ind)) +
+  coord_cartesian(xlim = c(length(beta_res_list) - 20, length(beta_res_list)),
+                  ylim = c(-5, 5))
+
+# visualizing sigma2 and sigma values
+sigma2_vec <- do.call(rbind, test$sigma2)
+plot(x = sigma2_vec, xaxt = "n", type = "l")
+acf(sigma2_vec, pl = TRUE)
 
 sigma_sum_vec <- do.call(rbind, lapply(test$sigma_m, sum))
 plot(x = sigma_sum_vec, type = "l")
