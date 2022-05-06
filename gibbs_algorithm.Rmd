@@ -39,14 +39,14 @@ hurr_list$y[[1]]
 
 # list of theta parameters
 theta <- list(
-  "beta" = list("beta" = matrix(data = 1, nrow = 1, ncol = 5),
+  "beta" = list("beta" = matrix(data = 0, nrow = 1, ncol = 5),
                 "mu" = 0,
                 "sigma" = 0),
-  "B" = list(matrix(data = 1, nrow = nrow(hurr_df), ncol = 5),
+  "B" = list(matrix(data = 0, nrow = nrow(hurr_df), ncol = 5),
              "mu" = 0,
              "sigma" = 0),
-  "sigma2" = c(3),
-  "sigma_m" = matrix(data = 1, nrow = 5, ncol = 5) + diag(1, 5, 5)
+  "sigma2" = c(1),
+  "sigma_m" = matrix(data = .5, nrow = 5, ncol = 5) + diag(.5, 5, 5)
 )
 ```
 
@@ -93,7 +93,7 @@ beta_dist <- function(sigma, B){
   u = rowSums(u_matrix)
 
   mu = (solve(sigma, tol = 1e-95) / nrow(hurr_df)) %*% matrix(u, nrow = 5)
-  sigma = solve(sigma, tol = 1e-95) / nrow(hurr_df)
+  sigma = psych::cor.smooth(solve(sigma, tol = 1e-95) / nrow(hurr_df))
   
   sample = mvrnorm(n = 1, mu, sigma)
   
@@ -116,11 +116,11 @@ B_dist <- function(x, y, sigma2, sigma_m, beta){
     
     mat <- diag(sigma2, nrow = length(y_adj), ncol = length(y_adj))
     
-    u <- t(x[[i]]) %*% solve(mat, tol = 1e-95) %*% y_adj + sigma_m %*% t(beta)
-    v <- t(x[[i]]) %*% solve(mat, tol = 1e-95) %*% x[[i]] + sigma_m
+    u <- t(x[[i]]) %*% solve(mat, tol = 1e-95) %*% y_adj + solve(sigma_m, tol = 1e-95) %*% t(beta)
+    v <- t(x[[i]]) %*% solve(mat, tol = 1e-95) %*% x[[i]] + solve(sigma_m, tol = 1e-95)
     
     mu <- solve(v, tol = 1e-95) %*% u
-    sigma <- solve(v, tol = 1e-95)
+    sigma <- psych::cor.smooth(solve(v, tol = 1e-95))
     v_list[[i]] <- v
     
     B_list[[i]] <- mvrnorm(n = 1, mu, sigma)
@@ -174,6 +174,7 @@ sigma_m_dist <- function(beta, B){
   
  n = nrow(hurr_df)
  
+ # output is covariance matrix
  sample = matrix(riwish(v = n + 6, S = matrix),
                  ncol = 5)
   
@@ -183,11 +184,6 @@ sigma_m_dist <- function(beta, B){
   return(sample)
 }
 ```
-
-```{r conditional distributions 2}
-beta_dist
-```
-
 
 ```{r gibbs sampling function, error = TRUE}
 gibbs_fun <- function(iter, start, data){
@@ -244,15 +240,34 @@ beta_vec <- data.frame(do.call(rbind, beta_res_list)) %>%
   group_by(beta) %>% 
   mutate(ind = c(1:length(beta_res_list)))
 
+# this will calculate the mean estimate for each coefficient
+beta_vec[2551:5000,] %>% # we want to specify the second half of runs 
+  group_by(beta) %>% 
+  summarise(avg_est = mean(estimate))
+
 ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
   geom_line(aes(ind))
 # zooming in on end of graph
 ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
   geom_line(aes(ind)) +
-  coord_cartesian(xlim = c(0, length(beta_res_list)))
+  coord_cartesian(xlim = c(length(beta_res_list) - 100, length(beta_res_list)))
+
+# extracting estimates
+beta_vec[2551:5000,] %>% # we want to specify the second half of runs 
+  group_by(beta) %>% 
+  summarise(avg_est = mean(estimate))
+
+sigma2_vec <- do.call(rbind, test$sigma2)
+mean(sigma2_vec[500:1000])
+
+Reduce("+", test$sigma_m[500:1000]) / length(test$sigma_m[500:1000])
+
+
+
 
 # visualizing sigma2 and sigma values
 sigma2_vec <- do.call(rbind, test$sigma2)
+mean(sigma2_vec)
 plot(x = sigma2_vec, xaxt = "n", type = "l")
 acf(sigma2_vec, pl = TRUE)
 
