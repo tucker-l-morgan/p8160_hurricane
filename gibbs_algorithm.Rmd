@@ -23,8 +23,8 @@ hurr_df <- read_csv("./data/hurricane703.csv") %>%
          lng_change = c(0, diff(Longitude, lag = 1)),
          wind_change = c(0, diff(Wind.kt, lag = 1)),
          wind_lag = lag(Wind.kt, n = 1)) %>% 
-  dplyr::select(ID, lat_change, lng_change, wind_change, wind_lag, Wind.kt) %>% 
-  nest(y = Wind.kt, x = lat_change:wind_lag) %>%  
+  dplyr::select(ID, wind_lag, lat_change, lng_change, wind_change, Wind.kt) %>% 
+  nest(y = Wind.kt, x = wind_lag:wind_change) %>%  
   mutate(x = map(.x = x, .f = ~model.matrix(~., data = .x)),
          y = map(.x = y, .f = pull))
 
@@ -245,8 +245,8 @@ B_compiler <- function(list){
 # visualizing beta values
 beta_res_list <- beta_compiler(list = test$beta)
 beta_vec <- data.frame(do.call(rbind, beta_res_list)) %>% 
-  rename(beta1 = 1, beta2 = 2, beta3 = 3, beta4 = 4, beta5 = 5) %>% 
-  pivot_longer(cols = beta1:beta5, names_to = "beta", values_to = "estimate") %>% 
+  rename(beta0 = 1, beta1 = 2, beta2 = 3, beta3 = 4, beta4 = 5) %>% 
+  pivot_longer(cols = beta0:beta4, names_to = "beta", values_to = "estimate") %>% 
   group_by(beta) %>% 
   mutate(ind = c(1:length(beta_res_list)))
 
@@ -273,4 +273,3 @@ mean(sigma2_vec)
 plot(x = sigma2_vec, xaxt = "n", type = "l")
 acf(sigma2_vec, pl = TRUE)
 ```
-
