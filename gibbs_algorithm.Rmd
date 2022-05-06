@@ -253,6 +253,10 @@ beta_vec <- data.frame(do.call(rbind, beta_res_list)) %>%
 ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
   geom_line(aes(ind))
 
+ggplot(data = beta_vec, aes(x = estimate, fill = beta)) +
+  geom_histogram(alpha = 0.5, position = "identity") +
+  facet_wrap(~beta, ncol = 3)
+
 # extracting estimates
 beta_estimate <- beta_vec[2551:5000,] %>% # we want to specify the second half of runs 
   group_by(beta) %>% 
