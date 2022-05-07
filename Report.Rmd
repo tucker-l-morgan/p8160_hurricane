@@ -209,7 +209,7 @@ ggplot(data = rel_error_vec, aes(x = rel_error)) +
        title = "Figure 4: Distribution of Normalized RMSE Across Population of Hurricanes")
 ```
 
-Our model performed okay predicting $Y_{i}(t+6)$ with most of our predictions yielding a normalized root-mean-squared-error (RMSE) of less than 0.1. However, there are a few instances of very poor predictions with a normalized RMSE of greater than 0.3.
+Our model performed somewhat well predicting $Y_{i}(t+6)$ with most of our predictions yielding a normalized root-mean-squared-error (RMSE) of less than 0.1. However, there are a few instances of very poor predictions with a normalized RMSE of greater than 0.3.
 
 ## 3.3. Changes in Hurricanes over Time
 
@@ -217,10 +217,21 @@ We can use time variables to examine seasonal differences between hurricanes as 
 
 ## 3.4. Analyzing Damage Caused by Hurricanes
 
-# 4. Discussion 
-\vspace{5mm}
+# 4. Discussion
+
+In **Figure 2** we see the distribution of $\beta_i$ estimates across the population of hurricanes. Some of these coefficients, like $\beta_1$ and $\beta_4$, do not differ much across the population, having a narrow range of values. This indicates the effect of wind speed at time $t$ and the effect of change in wind speed from time $t-6$ to $t$ on future wind speed do not vary much between hurricanes. The larger variance of $\beta_2$ and $\beta_3$ indicates the effect of change in position (latitude and longitude) on future wind speed varies more among the population of hurricanes. This makes sense because change in position can have a different effect on wind speed depending on the location of the hurricane. Hurricanes typically weaken closer to land, therefore change in location may have a different effect on wind speed depending on how close the hurricane is to land **[1]**.
+
+Lastly, we see that $\beta_0$ has a larger magnitude of effect on future wind speed and a similar variance to $\beta_2$ and $\beta_3$. This indicates there are hurricane characteristics not captured in our model that have an influence on future wind speed, and these underlying characteristics differ among the population of hurricanes.
 
 ## 4.1. Limitations
-\vspace{5mm}
 
-# References 
+There are a few limitations in the model estimation technique here. First, Bayesian models can be sensitive to the selection of prior distributions. The assumption of prior distributions in this scenario were non-informative or weak, however different prior distributions may change results. Additionally, the Gibbs sampling technique may fail under certain conditions. For instance, if the conditional posterior distributions result in extreme probability states, Gibbs sampling may become "trapped" in one of the high-probability conditions. Additionally, Gibbs sampling requires knowledge of conditional posterior distributions, however these distributions can be difficult to derive or intractable in some cases.
+
+## 4.2. Strengths
+
+The Gibbs sampling algorithm is relatively simple and easy to understand in concept. Additionally, we found the resulting Markov Chain stabilized relatively quickly, which can reduce the computational overhead required to perform this kind of estimation.
+
+
+# References
+
+1. Interaction between a hurricane and the land. Hurricanes. (n.d.). Retrieved May 7, 2022, from http://www.hurricanescience.org/science/science/hurricaneandland/ 
