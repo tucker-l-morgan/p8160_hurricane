@@ -8,6 +8,8 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
+library(sqldf)
+library(patchwork)
 ```
 
 # 1. Introduction
@@ -209,7 +211,107 @@ Our model performed somewhat well predicting $Y_{i}(t+6)$ with most of our predi
 
 ## 3.3. Changes in Hurricanes over Time
 
-We can use time variables to examine seasonal differences between hurricanes as well as changes over years. Let $x_{i,1}$ be the month of year when the i-th hurricane began, $x_{i,2}$ be the calendar year in which hurricane i began, and $x_{i,3}$ be the type of the i-th hurricane.
+```{r creating graphs for time trends, include = FALSE}
+# avg of last 100 beta_i, 700*5
+B_est2 <- Reduce("+", B_res_list[501:1000]) / length(B_res_list[501:1000])
+colnames(B_est2) <- c('beta0', 'beta1' ,'beta2', 'beta3', 'beta4')
+
+extra_df <- read_csv("./data/hurricane703.csv") %>%
+  janitor::clean_names() %>% 
+  drop_na() %>% 
+  group_by(id) %>% 
+  mutate(month_row = as.numeric(factor(month, levels = month.name)),
+         year = as.numeric(season),
+         type = as.factor(nature),
+         max_speed = max(wind_kt),
+         avg_speed = mean(wind_kt),
+         start_speed = first(wind_kt)) %>% 
+  mutate(month = recode(month_row,
+                        '1' = 13)) %>% 
+  dplyr::select(id, max_speed, avg_speed, start_speed, month, year, type) %>% 
+  filter(n() > 2) %>% 
+  filter(row_number() == 1)
+
+task5_df <- cbind(B_est2, extra_df) %>% 
+  select(id, everything())
+
+# beta_i by month
+df_month <- sqldf('SELECT AVG(beta0) AS b0, AVG(beta1) AS b1, AVG(beta2) AS b2, AVG(beta3) AS b3, AVG(beta4) AS b4,
+                  AVG(max_speed) AS max, AVG(avg_speed) AS average, AVG(start_speed) AS start, month
+                  FROM task5_df
+                  GROUP BY month')
+beta_month <- df_month %>% 
+              select(b0:b4, month) %>% 
+              pivot_longer(b0:b4,
+                           names_to = 'beta',
+                           values_to = 'beta_value')
+speed_month <- df_month %>% 
+               select(max:month) %>% 
+               pivot_longer(max:start,
+                            names_to = 'speed_type',
+                            values_to = 'speed')
+
+# beta_i by year
+df_year <- sqldf('SELECT AVG(beta0) AS b0, AVG(beta1) AS b1, AVG(beta2) AS b2, AVG(beta3) AS b3, AVG(beta4) AS b4,
+                  AVG(max_speed) AS max, AVG(avg_speed) AS average, AVG(start_speed) AS start, year
+                  FROM task5_df
+                  GROUP BY year')
+beta_year <- df_year %>% 
+              select(b0:b4, year) %>% 
+              pivot_longer(b0:b4,
+                           names_to = 'beta',
+                           values_to = 'beta_value')
+speed_year <- df_year %>% 
+               select(max:year) %>% 
+               pivot_longer(max:start,
+                            names_to = 'speed_type',
+                            values_to = 'speed')
+
+beta_month_plot <- ggplot(beta_month, aes(x = month, y = beta_value, color = beta)) + 
+  geom_point() + 
+  geom_smooth(se = F) +
+  labs(x = "Month",
+       y = "Estimate") +
+  theme(legend.position = "")
+speed_month_plot <- ggplot(speed_month, aes(x = month, y = speed, color = speed_type)) +
+  geom_point() + 
+  geom_smooth(se = F) +
+  labs(x = "Month",
+       y = "Speed") +
+  theme(legend.position = "")
+beta_year_plot <- ggplot(beta_year, aes(x = year, y = beta_value, color = beta)) + 
+  geom_point() + 
+  geom_smooth(se = F) +
+  labs(x = "Year",
+       y = "")
+speed_year_plot <- ggplot(speed_year, aes(x = year, y = speed, color = speed_type)) +
+  geom_point() + 
+  geom_smooth(se = F) +
+  labs(x = "Year",
+       y = "")
+```
+
+We can use time variables to examine seasonal differences between hurricanes as well as changes over years. Let $x_{i,1}$ be the month of year when the i-th hurricane began, $x_{i,2}$ be the calendar year in which hurricane i began, and $x_{i,3}$ be the type of the i-th hurricane. Using code similar to that in **Appendix A**, we performed linear regression with $x_{i,1}, x_{i,2},$ and $x_{i,3}$ as predictors of each $\boldsymbol{\beta}_i$ coefficient. For these regressions, our data begins in April and progresses through January to align with typical "hurricane seasons". Note there were no hurricanes observed in February and March.
+
+Before performing regressions, we explored the overall trends of $\beta$ coefficients over time. In **Figure 5**, we can see there are no clear changes in $\beta$ values across months or across years.
+
+```{r beta time plots, message = FALSE}
+beta_month_plot + beta_year_plot +
+  plot_annotation(title = "Figure 5: Beta Estimates Across Months and Years")
+```
+
+Accordingly, we saw no significant relationship between time predictors and $\beta_0, \beta_2, \beta_3$ or $\beta_4$. There was a significant relationship between year and $\beta_1$, the effect of wind speed at time $t$, however the estimated coefficient is approximately $-3.7 \times 10^{-4}$, which is quite small. We did see a significant relationship between $\beta_2$ and $\beta_3$, the effect of change in latitude and change in longitude, and subtropical hurricanes compared to tropical storms. This could mean that the wind speed of subtropical hurricanes is more sensitive to changes in location than for tropical storms. In conclusion, we did not find any significant trends between our estimated $\beta_i$ coefficients and time - years and months. We could interpret this to mean that the effects of change in position, change in wind speed, and previous wind speed do not significantly change for hurricanes at different times.
+
+```{r speed time plots, message = FALSE}
+speed_month_plot + speed_year_plot +
+  plot_annotation(title = "Figure 6: Hurricane Speed Across Months and Years")
+```
+
+We did see changes in wind speed across months and years (see **Figure 6**). For starting wind speed of hurricanes, we saw significant relationships with the month of December compared to April. All months besides January showed increased starting wind speed compared to April. Extra-tropical hurricanes showed a statistically significantly higher starting speed compared to tropical storms, whereas disturbances and not rated hurricanes showed statistically significantly lower starting speed.
+
+For max speed, the later months (July through December) tend to have higher max speeds compared to April, however these are not statistically significant. Despite what some may claim - that wind speed has increased over the years - we find a statistically significant relationship between year and max wind speed indicating that wind speed decreases as year increases. We also find max wind speed is statistically significantly lower for sub-tropical hurricanes compared to tropical storms.
+
+Lastly, we find similar results for average wind speed over time. The months of June through December tend to have higher wind speed compared to April, however this is not statistically significant. Again, we see a statistically significant result that average wind speed tends to decrease as year increases. These trends can be seen in **Figure 6**.
 
 ## 3.4. Analyzing Damage Caused by Hurricanes
 
@@ -220,6 +322,8 @@ We can use time variables to examine seasonal differences between hurricanes as 
 In **Figure 2** we see the distributions of $\beta_i$ estimates across the population of hurricanes. Some of these coefficients, like $\beta_1$ and $\beta_4$, have a relatively narrow range of values. This indicates the effect of wind speed at time $t$ and the effect of change in wind speed from time $t-6$ to $t$ on future wind speed do not vary much between hurricanes. The larger variance of $\beta_2$ and $\beta_3$ indicates the effect of change in position (latitude and longitude) on future wind speed varies more among the population of hurricanes. This makes sense because change in position can have a different effect on wind speed depending on the location of the hurricane. Hurricanes typically weaken closer to land, therefore change in location may have a different effect on wind speed depending on how close the hurricane is to land **[1]**.
 
 Lastly, we see that $\beta_0$ has a larger magnitude of effect on future wind speed. This indicates there are hurricane characteristics not captured in our model that have an influence on future wind speed, and these underlying characteristics differ among the population of hurricanes. As an example of something not captured in this model, wind temperature tends to have influence on the intensity of hurricanes and might play a role in this model.
+
+When examining trends across time, we did not see changes in $\beta_i$ coefficients in different months or years. This indicates the effects of change in position, change in wind speed, and previous wind speed do not significantly change for hurricanes at different times or year or in different years.
 
 ## 4.1. Limitations
 
@@ -232,4 +336,28 @@ The Gibbs sampling algorithm is relatively simple and easy to understand in conc
 
 # References
 
-1. Interaction between a hurricane and the land. Hurricanes. (n.d.). Retrieved May 7, 2022, from http://www.hurricanescience.org/science/science/hurricaneandland/ 
+1. Interaction between a hurricane and the land. Hurricanes. (n.d.). Retrieved May 7, 2022, from http://www.hurricanescience.org/science/science/hurricaneandland/
+
+# Appendix
+
+## Appendix A
+
+```{r task 5 regression code, echo = TRUE, eval = FALSE}
+#beta0 regression
+reg(y = beta0, month, year, type)
+#beta1 regression
+reg(y = beta1, month, year, type)
+#beta2 regression
+reg(y = beta2, month, year, type)
+#beta3 regression
+reg(y = beta3, month, year, type)
+#beta4 regression
+reg(y = beta4, month, year, type)
+#start_speed regression
+reg(y = start_speed, month, year, type)
+#max_speed regression
+reg(y = max_speed, month, year, type)
+#avg_speed regression
+reg(y = avg_speed, month, year, type)
+```
+
