@@ -18,7 +18,7 @@ library(patchwork)
 Hurricanes are dangerous and can cause major damage from storm surge, wind damage, rip currents and flooding. They can happen along any U.S. coast or in any territory in the Atlantic or Pacific oceans. The amount of damage depends on the strength of a storm and what it hits. High winds are one of the primary causes of hurricane-inflicted loss of life and property damage. For better planning and prevention ahead to secure people from destructive hurricanes, it is extremely important and necessary to explore trajectories of hurricanes and predict each hurricane's wind speed.
 
 ## 1.2. Objectives
-In this study, two data sets were explored.In the first part, we attempted to use the track data of 703 hurricanes in the North Atlantic area since 1950 to explore the seasonal differences and if there is any evidence showing that the hurricane wind speed has been increasing over years. First, we calculated the posterior distribution of four parameters $( B, \beta, \sigma^{2}, \Sigma^{-1})$ in proposed Bayesian model. Next, we designed an MCMC algorithm to generate the posterior distribution. Then, we used the MCMC chain we developed to estimate the parameters, and checked to see how well the model fits the data.
+In this study, two data sets were explored. In the first part, we attempted to use the track data of 703 hurricanes in the North Atlantic area since 1950 to explore the seasonal differences and if there is any evidence showing that the hurricane wind speed has been increasing over years. First, we calculated the posterior distribution of four parameters $( B, \beta, \sigma^{2}, \Sigma^{-1})$ in proposed Bayesian model. Next, we designed an MCMC algorithm to generate the posterior distribution. Then, we used the MCMC chain we developed to estimate the parameters, and checked to see how well the model fits the data.
 
 Furthermore, in order to forecast hurricane damage and deaths, another data set containing the damages and deaths caused by 46 hurricanes in the United States were used. We constructed a model and to determine which traits of hurricanes are more associated to damage and deaths.   
 
@@ -176,7 +176,7 @@ ggplot(data = B_vec, aes(x = estimate, fill = beta)) +
   labs(x = "Beta Estimates Across Hurricanes",
        y = "Count",
        title = "Figure 2: Beta Estimates Across Population of Hurricanes",
-       caption = "Note: Vertical lines indicate average estimates of beta values across hurricanes.") +
+       caption = "Note: Vertical lines indicate means.") +
   theme(legend.position = "")
 ```
 
@@ -323,15 +323,21 @@ In **Figure 2** we see the distributions of $\beta_i$ estimates across the popul
 
 Lastly, we see that $\beta_0$ has a larger magnitude of effect on future wind speed. This indicates there are hurricane characteristics not captured in our model that have an influence on future wind speed, and these underlying characteristics differ among the population of hurricanes. As an example of something not captured in this model, wind temperature tends to have influence on the intensity of hurricanes and might play a role in this model.
 
-When examining trends across time, we did not see changes in $\beta_i$ coefficients in different months or years. This indicates the effects of change in position, change in wind speed, and previous wind speed do not significantly change for hurricanes at different times or year or in different years.
+When examining trends across time, we did not see changes in $\beta_i$ coefficients in different months or years. This indicates the effects of change in position, change in wind speed, and previous wind speed do not significantly change for hurricanes at different times of year or in different years.
 
 ## 4.1. Limitations
 
 There are a few limitations in the model estimation technique. First, Bayesian models are sensitive to the selection of prior distributions. The assumption of prior distributions in this scenario were non-informative or weak, however different prior distributions may change results. Additionally, the Gibbs sampling technique may fail under certain conditions. For instance, if the conditional posterior distributions result in extreme probability states, Gibbs sampling may become "trapped" in one of the high-probability conditions. Additionally, Gibbs sampling requires knowledge of conditional posterior distributions, however these distributions can be difficult to derive or intractable in some cases.
 
+When evaluating prediction accuracy, we trained our model on the full data set and then compared predictions of that data set to the actual values. This may more closely approximate training error rather than test error. In order to build a more robust model, we would need to split our data into training and testing data sets before analysis. One way to do this would be to partition the data for each hurricane, using the majority of observations to train parameters and the remaining data to evaluate predictions.
+
 ## 4.2. Strengths
 
 The Gibbs sampling algorithm is relatively simple and easy to understand in concept. Additionally, we found the resulting Markov Chain stabilized relatively quickly, which can reduce the computational overhead required to perform this kind of estimation.
+
+## 4.3. Future Work
+
+In the future, it would be interesting to include more variables that may have effects on hurricanes such as air temperature and time over water. Additionally, model evaluation could be improved by splitting data into training and testing sets.
 
 
 # References
