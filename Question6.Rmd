@@ -7,6 +7,7 @@ output: pdf_document
 ```{r echo = FALSE, message=FALSE,warning = FALSE}
 library(tidyverse)
 library(dplyr)
+library(caret)
 ```
 
 
@@ -42,8 +43,130 @@ hurricaneOutcome <- read.csv("data/hurricaneoutcome2.csv") %>% janitor::clean_na
                            deaths=as.numeric(deaths),
                            nature=as.factor(nature))
 
-hurricaneOutcome
+hurricaneOutcome %>% distinct(hurrican_id)
+
+
+rownames(hurricaneOutcome) <- hurricaneOutcome$hurrican_id
+
+hurricane702 <- read_csv("./data/hurricane703.csv") %>% mutate(ID=tolower(ID))
+
+hurricane43 <- subset(hurricane702,ID %in%rownames(hurricaneOutcome)) 
+
+hurricaneOutcome %>% distinct(deaths)
+hurricaneOutcome %>% distinct(deaths)
+
+
+
 ```
 
+```{r}
+# load data
+load("./data/gibbs_res.RData")
+```
 
+```{r data preparation}
+# avg of last 100 beta_i, 700*5
+B_est2 <- Reduce("+", B_res_list[501:1000]) / length(B_res_list[501:1000])
+colnames(B_est2) <- c('beta0', 'beta1' ,'beta2', 'beta3', 'beta4')
+
+extra_df <- read_csv("./data/hurricane703.csv") %>%
+  janitor::clean_names() %>% 
+  drop_na() %>% 
+  group_by(id) %>% 
+  dplyr::select(id) %>% 
+  filter(n() > 2) %>% 
+  filter(row_number() == 1) %>% 
+  mutate(id=tolower(id))
+
+rownames(extra_df) <- extra_df$id
+
+B_est_res <- data.frame(cbind(rownames(extra_df),B_est2)) %>% filter(V1 %in% rownames(hurricaneOutcome))
+
+
+
+```
+
+## Lasso for damage
+```{r}
+hurricaneOutcome1 <- hurricaneOutcome[,-c(1,4)]
+set.seed(1)
+ctrl1 <- trainControl(method="repeatedcv",number=10,repeats=5)
+lasso.fit1 <- train(log(damage)~.,
+                   data=hurricaneOutcome1,
+                   method="glmnet",
+                   tuneGrid=expand.grid(alpha=1,
+                                        lambda=exp(seq(5,-1,length=100))),
+                   trControl=ctrl1)
+
+plot(lasso.fit1,xTrans=log)
+
+lasso.fit1$bestTune
+
+coef(lasso.fit1$finalModel,s=lasso.fit1$bestTune$lambda)
+```
+## Lasso for death
+```{r}
+hurricaneOutcome2 <- hurricaneOutcome[,-c(1,3)]
+set.seed(1)
+ctrl1 <- trainControl(method="repeatedcv",number=10,repeats=5)
+lasso.fit2 <- train(deaths~.,
+                   data=hurricaneOutcome2,
+                   method="glmnet",
+                   tuneGrid=expand.grid(alpha=1,
+                                        lambda=exp(seq(10,-1,length=100))),
+                   trControl=ctrl1)
+
+plot(lasso.fit2,xTrans=log)
+
+lasso.fit2$bestTune
+
+coef(lasso.fit2$finalModel,s=lasso.fit2$bestTune$lambda)
+```
+## Elastic for damage
+```{r}
+set.seed(1)
+
+elastic.fit1 <- train(damage~.,
+                   data=hurricaneOutcome1,
+                   method="glmnet",
+                   tuneGrid=expand.grid(alpha=seq(0,1,length=21),
+                                        lambda=exp(seq(5,-1,length=100))),
+                   trControl=ctrl1)
+
+elastic.fit1$bestTune
+
+myCol <- rainbow(25)
+myPar <- list(superpose.symbol=list(col=myCol),
+              superpose.line=list(col=myCol))
+plot(elastic.fit1,par.settings=myPar)
+
+
+
+coef(elastic.fit1$finalModel,s=elastic.fit1$bestTune$lambda)
+
+```
+## Elastic for death
+```{r}
+set.seed(1)
+
+elastic.fit2 <- train(deaths~.,
+                   data=hurricaneOutcome2,
+                   method="glmnet",
+                   tuneGrid=expand.grid(alpha=seq(0,1,length=21),
+                                        lambda=exp(seq(5,-1,length=100))),
+                   trControl=ctrl1)
+
+elastic.fit2$bestTune
+
+myCol <- rainbow(25)
+myPar <- list(superpose.symbol=list(col=myCol),
+              superpose.line=list(col=myCol))
+plot(elastic.fit2,par.settings=myPar)
+
+
+
+coef(elastic.fit2$finalModel,s=elastic.fit2$bestTune$lambda)
+
+
+```
 
