@@ -291,21 +291,25 @@ gibbs_predict <- function(data, B){
 }
 
 mse_function <- function(actual, predicted){
-  mse_list <- list()
+  rel_error_list <- list()
   
   for(i in 1:length(actual)){
-    mse_list[[i]] <- mean((actual[[i]][-1] - as.vector(predicted[[i]]))^2)
+    
+    mse <- mean((actual[[i]][-1] - as.vector(predicted[[i]]))^2)
+    rmse <- sqrt(mse)
+    
+    rel_error_list[[i]] <- (rmse / mean(actual[[i]][-1]))
   }
 
-  return(mse_list)
+  return(rel_error_list)
 }
 
 y_hat <- gibbs_predict(data = hurr_list, B = B_est)
 
-mse <- mse_function(actual = hurr_list$y, predicted = y_hat)
+rel_error <- mse_function(actual = hurr_list$y, predicted = y_hat)
 
 save(beta_res_list, beta_vec, beta_estimate,
      B_res_list, B_est, sigma2_vec, sigma2_est,
-     sigma_est, y_hat, mse, file = "./data/gibbs_res.RData")
+     sigma_est, y_hat, mse, rel_error, file = "./data/gibbs_res.RData")
 ```
 
