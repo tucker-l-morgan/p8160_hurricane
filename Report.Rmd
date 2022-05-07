@@ -1,12 +1,13 @@
 ---
 title: "P8160 - Hurricane Project Report"
-author: "Wenbo Group#3"
+author: "Yimiao Pang, Xiao Ma, Wen Cheng, Tucker Morgan, Jie Liu"
 date: "5/5/2022"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
 ```
 
 # 1. Introduction
@@ -27,7 +28,6 @@ In this study, there are two data sets. First one contains 703 hurricanes in the
 The second data set contains the damages and deaths caused by 46 hurricanes in the United States. There are 14 variables and 43 observations. 
 
 ## 2.2. Posterior Distributions
-\vspace{5mm}
 
 The following Bayesian model was suggested.  
 
@@ -113,7 +113,6 @@ where $v = d+1+n$, and $\Psi = I + \sum_{i = 1}^{n}(\beta_i - \beta)^{T}(\beta_i
 
 
 ## 2.3. Gibbs Sampling Algorithm
-\vspace{5mm}
 
 Now that we have conditional posterior distributions for each of our parameters, we can utilize the Gibbs Sampling MCMC algorithm to estimate model parameters. In Gibbs sampling, we use starting values $(\boldsymbol{\beta}_0, \Sigma_0, \sigma^2_0, \textbf{B}_0)$ and for each $j = 1,2,...,n$:
 \begin{enumerate}
@@ -123,10 +122,41 @@ Now that we have conditional posterior distributions for each of our parameters,
   \item[4.] Generate \textbf{B} from $\pi(\textbf{B} \mid \boldsymbol{\beta} = \boldsymbol{\beta}_j, \Sigma = \Sigma_j \sigma^2 = \sigma^2_j)$
 \end{enumerate}
 
-to yield $\Theta_j$. As $j$ increases and the Markov Chain continues, estimates stabilize to yield our results.
+to yield $\Theta_j$. As $j$ increases and the Markov Chain continues, estimates stabilize, and we can obtain our results by taking the mean of the Gibbs-generated parameters.
 
 # 3. Results 
-\vspace{5mm}
+
+```{r loading in estimates, include = FALSE}
+load("./data/gibbs_res.RData")
+```
+
+## 3.1. Bayesian Parameter Estimates
+
+To obtain estimates of $\Theta = (\textbf{B}^{T}, \boldsymbol{\beta}^{T}, \sigma^2, \Sigma)$, we first generated 1000 iterations in the Markov Chain; then, we find our estimates by taking the mean of $\Theta_j,\ j = 501,...,1000$. **Table 1** shows estimates for $\boldsymbol{\beta}$, and **Table 2** shows a selection of $\boldsymbol{\beta}_i,\ i = 1,...,6$ estimates from \textbf{B}. 
+
+```{r table of estimates, echo = FALSE}
+beta_estimate %>% 
+  knitr::kable(caption = "Beta Parameter Estimates")
+
+B_est %>% 
+  head() %>% 
+  data.frame() %>% 
+  cbind(i = c(1:6)) %>% 
+  rename(beta0 = 1, beta1 = 2, beta2 = 3, beta3 = 4, beta4 = 5) %>% 
+  relocate(i) %>% 
+  knitr::kable(caption = "Sample of Beta Estimates for i-th Hurricanes")
+```
+
+In **Table 3**, we see the estimated $\Sigma$ matrix. The estimated value of $\sigma^2$ is `r round(mean(sigma2_vec), digits = 2)`.
+
+```{r table of estimates 2, echo = FALSE}
+sigma_est %>% 
+  knitr::kable(caption = "Estimated Sigma Matrix")
+```
+
+## 3.2. Bayesian Model Predictions
+
+We can use the Bayesian model below along with our predictor variables to estimate $\widehat{Y}_i(t+6)$ for each hurricane.
 
 # 4. Discussion 
 \vspace{5mm}
