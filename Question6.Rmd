@@ -83,7 +83,7 @@ rownames(extra_df) <- extra_df$id
 B_est_res <- data.frame(cbind(rownames(extra_df),B_est2)) %>% filter(V1 %in% rownames(hurricaneOutcome))
 
 
-
+hurricane43.infor <- cbind(hurricaneOutcome,B_est_res) %>% select(-V1,-hurrican_id)
 ```
 
 ## Lasso for damage
