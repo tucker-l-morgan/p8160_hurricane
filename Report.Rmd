@@ -46,7 +46,7 @@ $$\boldsymbol{\beta}_{i} \sim \mathcal{N}(\boldsymbol{\beta}, \boldsymbol{\Sigma
 and we assume the following non-informative or weak prior distributions for $\sigma^2$, $\boldsymbol{\beta}$ and $\Sigma$.
 
 $$P(\sigma^2) \propto \frac{1}{\sigma^2};\quad P(\boldsymbol{\beta})\propto 1;\quad P(\Sigma^{-1}) \propto 
-|\Sigma|^{-(d+1)} \exp(-\frac{1}{2}\Sigma^{-1})$$
+|\Sigma|^{-(d+1)} \exp(-\frac{1}{2}tr(\Sigma^{-1}))$$
 
 $d$ is dimension of $\beta$.
 
@@ -54,7 +54,7 @@ Note from given Bayesian model:
 
 $$\epsilon_i(t) = Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,i}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \stackrel{i.i.d}{\sim} N(0, \sigma^2)$$
 $$\text{or}$$
-$$Y_i(t+6) {\sim} N(\boldsymbol{X}_i(t)\boldsymbol{\beta}_i^{T}, \sigma^2)$$
+$$(Y_i(t+6) \mid  \boldsymbol{X}_i(t),\ \boldsymbol{\beta}_i) {\sim} N(\boldsymbol{X}_i(t)\boldsymbol{\beta}_i^{T}, \sigma^2)$$
 where $\boldsymbol{X}_i(t) = (1, Y_i(t), \Delta_{i,1}(t), \Delta_{i,2}(t), \Delta_{i,3}(t))$, and $\boldsymbol{\beta}_i = (\beta_{0,i}, \beta_{1,i}, \beta_{2,i}, \beta_{3,i}, \beta_{4,i})$. Therefore,
 
 $$f_{Y_i(t+6)}(y_i(t+6) \mid \boldsymbol{X}_i(t), \boldsymbol{\beta}_i,  \sigma^2) = \frac{1}{\sqrt{2\pi}\sigma} \exp\Big\{-\frac{1}{2\sigma^2}\Big(y_i(t+6) - \boldsymbol{X}_i(t)\boldsymbol{\beta}_i^{T}\Big)^2 \Big\}$$
@@ -79,38 +79,40 @@ $$\times \prod_{i=1}^n \Big\{\det(2\pi\Sigma)^{-\frac{1}{2}} \exp\big\{-\frac{1}
 
 We can use the joint posterior distribution to derive conditional posterior distributions for each of our parameters.
 
-Let $\tau = \sigma^{2}$, then 
-$$(\tau|\beta, B, \Sigma^{-1}, Y) \propto \tau^{1+\frac{\sum_{i = 1}^{n}m_i}{2}} exp(-\tau \times \frac{1}{2}\sum_{i = 1}^{n}(Y_i - X_i\beta_i^{T})^{T}I^{-1}(Y_i - X_i\beta_i^{T} )$$
+Let $\tau = 1/\sigma^{2}$, then 
+$$(\tau|\boldsymbol{\beta}, \textbf{B}, \Sigma^{-1}, Y) \propto \tau^{1+\frac{\sum_{i = 1}^{n}m_i}{2}} exp(-\tau \times \frac{1}{2}\sum_{i = 1}^{n}(Y_i - X_i\beta_i^{T})^{T}(Y_i - X_i\beta_i^{T} )$$
 Thus, $\sigma^2$ is from inverse-gamma distribution
-$$\sigma^2 \sim \text{Inv-Gamma}(\frac{\sum_{i = 1}^{n}m_i}{2},  \frac{1}{2}\sum_{i = 1}^{n}(Y_i - X_i\beta_i^{T})(Y_i - X_i\beta_i^{T}).$$
+$$(\sigma^2 \mid \boldsymbol{\beta}, \textbf{B}, \Sigma^{-1}, Y) \sim \text{Inv-Gamma}(\frac{\sum_{i = 1}^{n}m_i}{2},  \frac{1}{2}\sum_{i = 1}^{n}(Y_i - X_i\beta_i^{T})(Y_i - X_i\beta_i^{T}).$$
 
 Parameter \textbf{B} has the following conditional posterior:
 \begin{align}
-\pi (B| \beta, \sigma^{2},\Sigma^{-1}, Y) 
+\pi (\textbf{B}| \boldsymbol{\beta}, \sigma^{2},\Sigma^{-1}, Y) 
 & \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} \left[ (Y_i - X_i\beta_i^{T})^{T}(\sigma^{2}I)^{-1}(Y_i - X_i\beta_i^{T})+(\beta_i - \beta)\Sigma^{-1}(\beta_1 - \beta)^{T} \right]) \\
 & \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} \left[ \beta_i(X_i^{T}(\sigma^{2}I)^{-1}X_i + \Sigma^{-1})\beta_i^{T} - 2\beta_i(X_i(\sigma^{2}I)^{-1})Y_i + \Sigma^{-1}\beta^{T} \right] )
 \end{align}
 Let $V_i = X_i^{T}(\sigma^{2}I)^{-1})X_i + \Sigma^{-1}$, and $U_i = X_i(\sigma^{2}I)^{-1}Y_i + \Sigma^{-1}\beta^{T}$, then
-$$ \boldsymbol{\beta}_i \sim \mathcal MVN(V_i^{-1}U_i, V_i^{-1}).$$
+$$(\boldsymbol{\beta}_i \mid \boldsymbol{\beta}, \Sigma^{-1}, \sigma^2, Y) \sim \mathcal MVN(V_i^{-1}U_i, V_i^{-1}).$$
 
 Similarly, parameter $\boldsymbol{\beta}$ has a conditional posterior of:
 \begin{align}
-\pi(\beta| B, \sigma^{2},\Sigma^{-1}, Y) 
-& \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} (\beta_i - \beta)\Sigma^{-1}(\beta_1 - \beta)^{T})\\
+\pi(\boldsymbol{\beta} | \textbf{B}, \sigma^{2},\Sigma^{-1}, Y) 
+& \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} (\beta_i - \beta)\Sigma^{-1}(\beta_i - \beta)^{T})\\
 & \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} \left[ \beta \Sigma^{-1}\beta^{T} - 2\beta \Sigma^{-1} \beta_i^{T} \right] )
 \end{align}
 Let $V = n \Sigma^{-1}, U = \sum_{i = 1}^{n} \Sigma^{-1} \beta_i^{T}$, then
 $$ (\boldsymbol{\beta}| B, \sigma^{2},\Sigma^{-1}, Y) \sim \mathcal MVN(V^{-1}U, V^{-1}).$$
 
 Finally, parameter $\Sigma$ has the conditional posterior:
+
 \begin{align}
 \pi(\Sigma^{-1}| \beta, B, \sigma^{2}, Y) 
 & \propto |\Sigma|^{-(d+1)}exp(-\frac{1}{2}tr(\Sigma^{-1})|\Sigma|^{-\frac{n}{2}} exp(-\frac{1}{2}\sum_{i = 1}^{n} (\beta_i - \beta)\Sigma^{-1}(\beta_1 - \beta)^{T})\\
-& \propto |\Sigma|^{-(d+1+\frac{n}{2})}exp(-\frac{1}{2} \left[ tr(\Sigma^{-1}) + tr((\beta_i - \beta)\Sigma^{-1}(\beta_1 - \beta)^{T}) \right] \\
-& \propto |\Sigma|^\frac{-(d+1+n+d+1)}{2} exp(-\frac{1}{2} tr( \left[ I + \sum_{i = 1}^{n}(\beta_i - \beta)^{T}(\beta_i - \beta) \right] \Sigma^{-1}))
+& \propto |\Sigma^{-1}|^{d+1+\frac{n}{2}}exp(-\frac{1}{2} \left[ tr(\Sigma^{-1}) + tr(\sum^n_{i=1}(\beta_i - \beta)\Sigma^{-1}(\beta_1 - \beta)^{T}) \right] \\
+& \propto |\Sigma^{-1}|^{3d+3+n-d-1} exp(-\frac{1}{2} tr( \left[ I + \sum_{i = 1}^{n}(\beta_i - \beta)^{T}(\beta_i - \beta) \right] \Sigma^{-1}))
 \end{align}
+
 Thus,
-$$ \Sigma \sim \mathcal W_d^{-1} (\Psi, v),$$
+$$ \Sigma^{-1} \sim \mathcal W_d (\Psi, v),$$
 where $v = 3d+3+n$, and $\Psi = I + \sum_{i = 1}^{n}(\beta_i - \beta)^{T}(\beta_i - \beta)$.
 
 
@@ -124,7 +126,7 @@ Now that we have conditional posterior distributions for each of our parameters,
   \item[4.] Generate \textbf{B} from $\pi(\textbf{B} \mid \boldsymbol{\beta} = \boldsymbol{\beta}_j, \Sigma = \Sigma_j \sigma^2 = \sigma^2_j)$
 \end{enumerate}
 
-to yield $\Theta_j$. As $j$ increases and the Markov Chain continues, estimates stabilize, and we can obtain our results by taking the mean of the Gibbs-generated parameters.
+to yield $\Theta_j$. As $j$ increases and the Markov Chain continues, estimates stabilize, and we can obtain our results by taking the mean of the Gibbs-generated parameters. Example code for this algorithm cane be seen in **Appendix A**.
 
 # 3. Results 
 
@@ -291,7 +293,7 @@ speed_year_plot <- ggplot(speed_year, aes(x = year, y = speed, color = speed_typ
        y = "")
 ```
 
-We can use time variables to examine seasonal differences between hurricanes as well as changes over years. Let $x_{i,1}$ be the month of year when the i-th hurricane began, $x_{i,2}$ be the calendar year in which hurricane i began, and $x_{i,3}$ be the type of the i-th hurricane. Using code similar to that in **Appendix A**, we performed linear regression with $x_{i,1}, x_{i,2},$ and $x_{i,3}$ as predictors of each $\boldsymbol{\beta}_i$ coefficient. For these regressions, our data begins in April and progresses through January to align with typical "hurricane seasons". Note there were no hurricanes observed in February and March.
+We can use time variables to examine seasonal differences between hurricanes as well as changes over years. Let $x_{i,1}$ be the month of year when the i-th hurricane began, $x_{i,2}$ be the calendar year in which hurricane i began, and $x_{i,3}$ be the type of the i-th hurricane. Using code similar to that in **Appendix B**, we performed linear regression with $x_{i,1}, x_{i,2},$ and $x_{i,3}$ as predictors of each $\boldsymbol{\beta}_i$ coefficient. For these regressions, our data begins in April and progresses through January to align with typical "hurricane seasons". Note there were no hurricanes observed in February and March.
 
 Before performing regressions, we explored the overall trends of $\beta$ coefficients over time. In **Figure 5**, we can see there are no clear changes in $\beta$ values across months or across years.
 
@@ -313,7 +315,7 @@ For max speed, the later months (July through December) tend to have higher max 
 
 Lastly, we find similar results for average wind speed over time. The months of June through December tend to have higher wind speed compared to April, however this is not statistically significant. Again, we see a statistically significant result that average wind speed tends to decrease as year increases. These trends can be seen in **Figure 6**.
 
-## 3.4. Analyzing Damage Caused by Hurricanes
+## 3.4. Analyzing Damage and Deaths Caused by Hurricanes
 
 (to be added)
 
@@ -339,6 +341,7 @@ The Gibbs sampling algorithm is relatively simple and easy to understand in conc
 
 In the future, it would be interesting to include more variables that may have effects on hurricanes such as air temperature and time over water. Additionally, model evaluation could be improved by splitting data into training and testing sets.
 
+\newpage
 
 # References
 
@@ -347,6 +350,36 @@ In the future, it would be interesting to include more variables that may have e
 # Appendix
 
 ## Appendix A
+
+```{r, echo = TRUE, eval = FALSE}
+gibbs_function <- function(iter, start, data){
+  # lists to store results
+  beta_list <- list()
+  sigma_list <- list()
+  sigma2_list <- list()
+  B_list <- list()
+  # starting values
+  beta_list[[1]] <- start$beta
+  sigma_list[[1]] <- start$sigma_m
+  sigma2_list[[1]] <- start$sigma2
+  B_list[[1]] <- theta$B
+  # for loop to iteratively generate Markov Chain
+  for (i in 2:iter){
+    beta_list[[i]] <- beta_dist(sigma = sigma_list[[i-1]], B = B_list[[i-1]][[1]])
+    sigma_list[[i]] <- sigma_m_dist(beta = beta_list[[i]][[1]], B = B_list[[i-1]][[1]])
+    sigma2_list[[i]] <- sigma2_dist(B = B_list[[i-1]][[1]], x = data$x, y = data$y)
+    B_list[[i]] <- B_dist(x = data$x, y = data$y, sigma2 = sigma2_list[[i]],
+                          sigma_m = sigma_list[[i]], beta = beta_list[[i]][[1]])
+  }
+  
+  return(list(beta = beta_list, sigma_m = sigma_list,
+              sigma2 = sigma2_list, B = B_list))
+  
+}
+```
+
+
+## Appendix B
 
 ```{r task 5 regression code, echo = TRUE, eval = FALSE}
 #beta0 regression
