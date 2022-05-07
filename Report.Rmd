@@ -24,10 +24,10 @@ Furthermore, in order to forecast hurricane damage and deaths, another data set 
 
 # 2. Methods
 
-## 2.1. Data Cleaning and Exploratory Analysis
-In this study, there are two data sets. First one contains 703 hurricanes in the North Atlantic since 1950. It recorded the location (longitude and latitude) and maximum wind speed every 6 hours for every hurricanes. There are 8 variables and 22038 observations.  
+## 2.1. Data Cleaning
+In this study, there are two data sets. First one contains 702 hurricanes in the North Atlantic since 1950. It recorded the location (longitude and latitude) and maximum wind speed every 6 hours for every hurricanes. There are 8 variables and 22038 observations in the original data set. In order to use the model predicting the hurricane, it needs at least 2 observations for each hurricane. We used filter() function delete 3 hurricanes data that only have one observation, and we create a new variable y for variable Wind.kt(the maximum wind speed), a new variable x for variable ID, wind_lag, lat_change(latitude change), lng_change(longitude change) and wind_change for the further steps.       
 
-The second data set contains the damages and deaths caused by 46 hurricanes in the United States. There are 14 variables and 43 observations. 
+The second data set contains the damages and deaths caused by 46 hurricanes in the United States. There are 14 variables and 43 observations. In order to predict the damage and deaths caused by hurricane, we combines information from first data set by the ID of hurricanes.
 
 ## 2.2. Posterior Distributions
 
