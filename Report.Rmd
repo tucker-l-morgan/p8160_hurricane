@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 ```
 
@@ -34,7 +34,7 @@ The following Bayesian model was suggested.
 $$Y_{i}(t+6) =\beta_{0,i}+\beta_{1,i}Y_{i}(t) + \beta_{2,i}\Delta_{i,1}(t)+
 \beta_{3,i}\Delta_{i,2}(t) +\beta_{4,i}\Delta_{i,3}(t)  + \epsilon_{i}(t)$$  
 
-where $Y_{i}(t)$ the wind speed at time $t$ (i.e. 6 hours earlier),  $\Delta_{i,1}(t)$, $\Delta_{i,2}(t)$ and $\Delta_{i,3}(t)$ are the changes of latitude, longitude and wind speed between $t$ and $t+6$, and $\epsilon_{i,t}$ follows a  normal distributions with mean zero and variance $\sigma^2$, independent across $t$. 
+where $Y_{i}(t)$ the wind speed at time $t$ (i.e. 6 hours earlier),  $\Delta_{i,1}(t)$, $\Delta_{i,2}(t)$ and $\Delta_{i,3}(t)$ are the changes of latitude, longitude and wind speed between $t$ and $t-6$, and $\epsilon_{i,t}$ follows a  normal distributions with mean zero and variance $\sigma^2$, independent across $t$. 
 
 In the model,  $\boldsymbol{\beta}_{i} =  (\beta_{0,i},\beta_{1,i},...,\beta_{7,i})$ are the random coefficients associated the $i$th hurricane, we assume that 
 
@@ -132,9 +132,9 @@ load("./data/gibbs_res.RData")
 
 ## 3.1. Bayesian Parameter Estimates
 
-To obtain estimates of $\Theta = (\textbf{B}^{T}, \boldsymbol{\beta}^{T}, \sigma^2, \Sigma)$, we first generated 1000 iterations in the Markov Chain. As an illustration, **Figure 1** shows the Markov Chain for $\boldsymbol{\beta}$ estimates. Although there is some noise in the chart, we can see that $\beta_1$ and $\beta_4$, the coefficients associated with wind speed at time $t$ and the change in wind speed from $t-6$ to $t$, tend to fluctuate around $1$, whereas the remaining coefficients fluctuate around $0$.
+To obtain estimates of $\Theta = (\textbf{B}^{T}, \boldsymbol{\beta}^{T}, \sigma^2, \Sigma)$, we first generated 1000 iterations in the Markov Chain. As an illustration, **Figure 1** shows the Markov Chain for $\boldsymbol{\beta}$ estimates. Although there is some noise in the chart, we can see that $\beta_0$ converges to a value approximately equal to 4, $\beta_1$ fluctuates about 1, $\beta_2$ and $\beta_4$ are between 0 and 1, and $\beta_3$ is less than zero.
 
-```{r MCMC beta viz, echo = FALSE}
+```{r MCMC beta viz}
 ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
   geom_line(aes(ind)) +
   labs(x = "Markov Chain Iteration",
@@ -144,7 +144,7 @@ ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
 
 We find our estimates by taking the mean of $\Theta_j,\ j = 501,...,1000$. **Table 1** shows estimates for $\boldsymbol{\beta}$, and **Table 2** shows a selection of $\boldsymbol{\beta}_i,\ i = 1,...,6$ estimates from \textbf{B}. **Figure 2** shows the distribution of $\boldsymbol{\beta}_i$ coefficients across the population of hurricanes.
 
-```{r table of estimates, echo = FALSE}
+```{r table of estimates}
 beta_estimate %>% 
   knitr::kable(caption = "Beta Parameter Estimates")
 
@@ -156,26 +156,66 @@ B_est %>%
   relocate(i) %>% 
   knitr::kable(caption = "Sample of Beta Estimates for i-th Hurricanes")
 
-ggplot(data = beta_vec, aes(x = estimate, fill = beta)) +
+B_vec <- data.frame(B_est) %>% 
+  rename(beta0 = 1, beta1 = 2, beta2 = 3, beta3 = 4, beta4 = 5) %>% 
+  pivot_longer(cols = beta0:beta4, names_to = "beta", values_to = "estimate") %>% 
+  group_by(beta)
+
+B_avg_est <- data.frame(B_est) %>% 
+  rename(beta0 = 1, beta1 = 2, beta2 = 3, beta3 = 4, beta4 = 5) %>% 
+  pivot_longer(cols = beta0:beta4, names_to = "beta", values_to = "estimate") %>% 
+  group_by(beta) %>% 
+  summarise(avg_est = mean(estimate))
+
+ggplot(data = B_vec, aes(x = estimate, fill = beta)) +
   geom_histogram(alpha = 0.5, position = "identity", bins = 30) +
-  geom_vline(data = beta_estimate, mapping = aes(xintercept = avg_est), lty = "dashed") +
-  facet_wrap(~beta, ncol = 3) +
+  geom_vline(data = B_avg_est, mapping = aes(xintercept = avg_est), lty = "dashed") +
+  facet_wrap(~beta, ncol = 3, scales = "free") +
   labs(x = "Beta Estimates Across Hurricanes",
        y = "Count",
        title = "Figure 2: Beta Estimates Across Population of Hurricanes",
-       caption = "Note: Vertical lines indicate estimates of average beta values.")
+       caption = "Note: Vertical lines indicate average estimates of beta values across hurricanes.") +
+  theme(legend.position = "")
 ```
 
 In **Table 3**, we see the estimated $\Sigma$ matrix. The estimated value of $\sigma^2$ is `r round(mean(sigma2_vec), digits = 2)`.
 
-```{r table of estimates 2, echo = FALSE}
+```{r table of estimates 2, fig.height = 4}
 sigma_est %>% 
   knitr::kable(caption = "Estimated Sigma Matrix")
+
+acf(sigma2_vec, pl = TRUE, main = "Figure 3: Autocorrelation of Sigma^2 Markov Chain")
 ```
 
 ## 3.2. Bayesian Model Predictions
 
-We can use the Bayesian model below along with our predictor variables to estimate $\widehat{Y}_i(t+6)$ for each hurricane.
+We can use the above estimates with the Bayesian model below and our predictor variables to estimate $\widehat{Y}_i(t+6)$ for each hurricane.
+
+$$Y_{i}(t+6) =\beta_{0,i}+\beta_{1,i}Y_{i}(t) + \beta_{2,i}\Delta_{i,1}(t)+
+\beta_{3,i}\Delta_{i,2}(t) +\beta_{4,i}\Delta_{i,3}(t)  + \epsilon_{i}(t)$$
+
+```{r plotting mse}
+mse_vec <- data.frame(do.call(rbind, mse)) %>% 
+  rename(mse = 1) %>% 
+  mutate(rmse = sqrt(mse))
+
+rel_error_vec <- data.frame(do.call(rbind, rel_error)) %>% 
+  rename(rel_error = 1)
+
+ggplot(data = rel_error_vec, aes(x = rel_error)) +
+  geom_histogram(bins = 50, fill = "dodgerblue2", alpha = 0.7) +
+  labs(x = "Normalized Root Mean Squared Error",
+       y = "",
+       title = "Figure 4: Distribution of Normalized RMSE Across Population of Hurricanes")
+```
+
+Our model performed okay predicting $Y_{i}(t+6)$ with most of our predictions yielding a normalized root-mean-squared-error (RMSE) of less than 0.1. However, there are a few instances of very poor predictions with a normalized RMSE of greater than 0.3.
+
+## 3.3. Changes in Hurricanes over Time
+
+We can use time variables to examine seasonal differences between hurricanes as well as changes over years. Let $x_{i,1}$ be the month of year when the i-th hurricane began, $x_{i,2}$ be the calendar year in which hurricane i began, and $x_{i,3}$ be the type of the i-th hurricane.
+
+## 3.4. Analyzing Damage Caused by Hurricanes
 
 # 4. Discussion 
 \vspace{5mm}
