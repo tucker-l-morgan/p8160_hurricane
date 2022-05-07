@@ -270,6 +270,9 @@ sigma_est <- Reduce("+", test$sigma_m[501:1000]) / length(test$sigma_m[501:1000]
 B_res_list <- B_compiler(list = test$B)
 B_est <- Reduce("+", B_res_list[501:1000]) / length(B_res_list[501:1000])
 
+save(beta_res_list, beta_vec, beta_estimate,
+     B_res_list, B_est, sigma2_vec, sigma2_est,
+     sigma_est, file = "./data/gibbs_res.RData")
 
 # visualizing sigma2 values
 sigma2_vec <- do.call(rbind, test$sigma2)
@@ -277,3 +280,28 @@ mean(sigma2_vec)
 plot(x = sigma2_vec, xaxt = "n", type = "l")
 acf(sigma2_vec, pl = TRUE)
 ```
+
+```{r making predictions}
+gibbs_predict <- function(data, B){
+  y_pred_list <- list()
+  for(i in 1:length(data$x)){
+    y_pred_list[[i]] <- data$x[[i]] %*% t(t(B[i,]))
+  }
+  return(y_pred_list)
+}
+hurr_list$x[[1]] %*% t(t(B_est[1,]))
+y_hat <- gibbs_predict(data = hurr_list, B = B_est)
+
+mse_function <- function(actual, predicted){
+  mse_list <- list()
+  
+  for(i in 1:length(actual)){
+    mse_list[[i]] <- mean((actual[[i]][-1] - as.vector(predicted[[i]]))^2)
+  }
+
+  return(mse_list)
+}
+
+mse <- mse_function(actual = hurr_list$y, predicted = y_hat)
+```
+
