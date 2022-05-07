@@ -132,7 +132,17 @@ load("./data/gibbs_res.RData")
 
 ## 3.1. Bayesian Parameter Estimates
 
-To obtain estimates of $\Theta = (\textbf{B}^{T}, \boldsymbol{\beta}^{T}, \sigma^2, \Sigma)$, we first generated 1000 iterations in the Markov Chain; then, we find our estimates by taking the mean of $\Theta_j,\ j = 501,...,1000$. **Table 1** shows estimates for $\boldsymbol{\beta}$, and **Table 2** shows a selection of $\boldsymbol{\beta}_i,\ i = 1,...,6$ estimates from \textbf{B}. 
+To obtain estimates of $\Theta = (\textbf{B}^{T}, \boldsymbol{\beta}^{T}, \sigma^2, \Sigma)$, we first generated 1000 iterations in the Markov Chain. As an illustration, **Figure 1** shows the Markov Chain for $\boldsymbol{\beta}$ estimates. Although there is some noise in the chart, we can see that $\beta_1$ and $\beta_4$, the coefficients associated with wind speed at time $t$ and the change in wind speed from $t-6$ to $t$, tend to fluctuate around $1$, whereas the remaining coefficients fluctuate around $0$.
+
+```{r MCMC beta viz, echo = FALSE}
+ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
+  geom_line(aes(ind)) +
+  labs(x = "Markov Chain Iteration",
+       y = "Estimate",
+       title = "Figure 1: Markov Chain of Beta Estimates")
+```
+
+We find our estimates by taking the mean of $\Theta_j,\ j = 501,...,1000$. **Table 1** shows estimates for $\boldsymbol{\beta}$, and **Table 2** shows a selection of $\boldsymbol{\beta}_i,\ i = 1,...,6$ estimates from \textbf{B}. **Figure 2** shows the distribution of $\boldsymbol{\beta}_i$ coefficients across the population of hurricanes.
 
 ```{r table of estimates, echo = FALSE}
 beta_estimate %>% 
@@ -145,6 +155,15 @@ B_est %>%
   rename(beta0 = 1, beta1 = 2, beta2 = 3, beta3 = 4, beta4 = 5) %>% 
   relocate(i) %>% 
   knitr::kable(caption = "Sample of Beta Estimates for i-th Hurricanes")
+
+ggplot(data = beta_vec, aes(x = estimate, fill = beta)) +
+  geom_histogram(alpha = 0.5, position = "identity", bins = 30) +
+  geom_vline(data = beta_estimate, mapping = aes(xintercept = avg_est), lty = "dashed") +
+  facet_wrap(~beta, ncol = 3) +
+  labs(x = "Beta Estimates Across Hurricanes",
+       y = "Count",
+       title = "Figure 2: Beta Estimates Across Population of Hurricanes",
+       caption = "Note: Vertical lines indicate estimates of average beta values.")
 ```
 
 In **Table 3**, we see the estimated $\Sigma$ matrix. The estimated value of $\sigma^2$ is `r round(mean(sigma2_vec), digits = 2)`.
