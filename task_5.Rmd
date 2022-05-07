@@ -1,0 +1,127 @@
+---
+title: "Task 5"
+author: "Yimiao Pang"
+date: "5/6/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(sqldf)
+```
+
+```{r}
+# load data
+load("./data/gibbs_res.RData")
+```
+
+```{r data preparation}
+# avg of last 100 beta_i, 700*5
+B_est2 <- Reduce("+", B_res_list[901:1000]) / length(B_res_list[901:1000])
+colnames(B_est2) <- c('beta0', 'beta1' ,'beta2', 'beta3', 'beta4')
+
+extra_df <- read_csv("./data/hurricane703.csv") %>%
+  janitor::clean_names() %>% 
+  drop_na() %>% 
+  group_by(id) %>% 
+  mutate(month = as.numeric(factor(month, levels = month.name)),
+         year = as.numeric(season),
+         type = as.factor(nature),
+         max_speed = max(wind_kt),
+         avg_speed = mean(wind_kt),
+         start_speed = first(wind_kt)) %>% 
+  dplyr::select(id, max_speed, avg_speed, start_speed, month, year, type) %>% 
+  filter(n() > 1) %>% 
+  filter(row_number() == 1)
+
+task5_df <- cbind(B_est2, extra_df) %>% 
+  select(id, everything())
+```
+
+```{r exploratory data analysis}
+# months
+# sort(unique(task5_df$month))
+
+# beta_i by month
+df_month <- sqldf('SELECT AVG(beta0) AS b0, AVG(beta1) AS b1, AVG(beta2) AS b2, AVG(beta3) AS b3, AVG(beta4) AS b4,
+                  AVG(max_speed) AS max, AVG(avg_speed) AS average, AVG(start_speed) AS start, month
+                  FROM task5_df
+                  GROUP BY month')
+beta_month <- df_month %>% 
+              select(b0:b4, month) %>% 
+              pivot_longer(b0:b4,
+                           names_to = 'beta',
+                           values_to = 'beta_value')
+speed_month <- df_month %>% 
+               select(max:month) %>% 
+               pivot_longer(max:start,
+                            names_to = 'speed_type',
+                            values_to = 'speed')
+ggplot(beta_month, aes(x = month, y = beta_value, color = beta)) + geom_smooth(se = F)
+ggplot(speed_month, aes(x = month, y = speed, color = speed_type)) + geom_smooth(se = F)
+
+# beta_i by year
+df_year <- sqldf('SELECT AVG(beta0) AS b0, AVG(beta1) AS b1, AVG(beta2) AS b2, AVG(beta3) AS b3, AVG(beta4) AS b4,
+                  AVG(max_speed) AS max, AVG(avg_speed) AS average, AVG(start_speed) AS start, year
+                  FROM task5_df
+                  GROUP BY year')
+beta_year <- df_year %>% 
+              select(b0:b4, year) %>% 
+              pivot_longer(b0:b4,
+                           names_to = 'beta',
+                           values_to = 'beta_value')
+speed_year <- df_year %>% 
+               select(max:year) %>% 
+               pivot_longer(max:start,
+                            names_to = 'speed_type',
+                            values_to = 'speed')
+ggplot(beta_year, aes(x = year, y = beta_value, color = beta)) + geom_smooth(se = F)
+ggplot(speed_year, aes(x = year, y = speed, color = speed_type)) + geom_smooth(se = F)
+
+# beta_i by type
+df_type <- task5_df %>% 
+            select(beta0:start_speed, type)
+beta_type <- df_type %>% 
+              select(beta0:beta4, type) %>% 
+              pivot_longer(beta0:beta4,
+                           names_to = 'beta',
+                           values_to = 'beta_value')
+speed_type <- df_type %>% 
+               select(max_speed:type) %>% 
+               pivot_longer(max_speed:start_speed,
+                            names_to = 'speed_type',
+                            values_to = 'speed')
+ggplot(beta_type, aes(x = type, y = beta_value, fill = beta)) + geom_boxplot()
+ggplot(speed_type, aes(x = type, y = speed, fill = speed_type)) + geom_boxplot()
+
+```
+
+```{r regression}
+reg <- function(y, month, year, type){
+  res <- lm(y~factor(month) + year + type)
+  
+  return(summary(res))
+}
+#beta0_reg <- lm(beta0~factor(month) + year + type, data = task5_df)
+#summary(beta0_reg)
+month <- task5_df$month
+year <- task5_df$year
+type <- task5_df$type
+
+#beta0 regression
+reg(y = task5_df$beta0, month, year, type)
+#beta1 regression
+reg(y = task5_df$beta1, month, year, type)
+#beta2 regression
+reg(y = task5_df$beta2, month, year, type)
+#beta3 regression
+reg(y = task5_df$beta3, month, year, type)
+#beta4 regression
+reg(y = task5_df$beta4, month, year, type)
+#max_speed regression
+reg(y = task5_df$max_speed, month, year, type)
+#avg_speed regression
+reg(y = task5_df$avg_speed, month, year, type)
+```
+
