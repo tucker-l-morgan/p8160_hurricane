@@ -10,7 +10,7 @@ library(dplyr)
 library(caret)
 ```
 
-
+ 
 ```{r echo = FALSE, message=FALSE,warning = FALSE}
 knitr::opts_chunk$set(
   echo = FALSE
@@ -52,8 +52,6 @@ hurricane702 <- read_csv("./data/hurricane703.csv") %>% mutate(ID=tolower(ID))
 
 hurricane43 <- subset(hurricane702,ID %in%rownames(hurricaneOutcome)) 
 
-hurricaneOutcome %>% distinct(deaths)
-hurricaneOutcome %>% distinct(deaths)
 
 
 
@@ -83,90 +81,121 @@ rownames(extra_df) <- extra_df$id
 B_est_res <- data.frame(cbind(rownames(extra_df),B_est2)) %>% filter(V1 %in% rownames(hurricaneOutcome))
 
 
-hurricane43.infor <- cbind(hurricaneOutcome,B_est_res) %>% select(-V1,-hurrican_id)
+hurricane43.infor <- cbind(hurricaneOutcome,B_est_res) %>% select(-V1,-hurrican_id) %>% 
+                      mutate(beta0=as.numeric(beta0),
+                             beta1=as.numeric(beta1),
+                             beta2=as.numeric(beta2),
+                             beta3=as.numeric(beta3),
+                             beta4=as.numeric(beta4)
+                             )
 ```
 
-## Lasso for damage
-```{r}
-hurricaneOutcome1 <- hurricaneOutcome[,-c(1,4)]
-set.seed(1)
-ctrl1 <- trainControl(method="repeatedcv",number=10,repeats=5)
-lasso.fit1 <- train(log(damage)~.,
-                   data=hurricaneOutcome1,
-                   method="glmnet",
-                   tuneGrid=expand.grid(alpha=1,
-                                        lambda=exp(seq(5,-1,length=100))),
-                   trControl=ctrl1)
-
-plot(lasso.fit1,xTrans=log)
-
-lasso.fit1$bestTune
-
-coef(lasso.fit1$finalModel,s=lasso.fit1$bestTune$lambda)
-```
-## Lasso for death
-```{r}
-hurricaneOutcome2 <- hurricaneOutcome[,-c(1,3)]
-set.seed(1)
-ctrl1 <- trainControl(method="repeatedcv",number=10,repeats=5)
-lasso.fit2 <- train(deaths~.,
-                   data=hurricaneOutcome2,
-                   method="glmnet",
-                   tuneGrid=expand.grid(alpha=1,
-                                        lambda=exp(seq(10,-1,length=100))),
-                   trControl=ctrl1)
-
-plot(lasso.fit2,xTrans=log)
-
-lasso.fit2$bestTune
-
-coef(lasso.fit2$finalModel,s=lasso.fit2$bestTune$lambda)
-```
-## Elastic for damage
+## Elastic for damage without parameter information
 ```{r}
 set.seed(1)
 
-elastic.fit1 <- train(damage~.,
+elastic.fit10 <- train(log(damage)~.,
                    data=hurricaneOutcome1,
                    method="glmnet",
                    tuneGrid=expand.grid(alpha=seq(0,1,length=21),
-                                        lambda=exp(seq(5,-1,length=100))),
+                                        lambda=exp(seq(2,-5,length=100))),
                    trControl=ctrl1)
 
-elastic.fit1$bestTune
+elastic.fit10$bestTune
 
 myCol <- rainbow(25)
 myPar <- list(superpose.symbol=list(col=myCol),
               superpose.line=list(col=myCol))
-plot(elastic.fit1,par.settings=myPar)
+plot(elastic.fit10,par.settings=myPar)
 
 
 
-coef(elastic.fit1$finalModel,s=elastic.fit1$bestTune$lambda)
+coef(elastic.fit10$finalModel,s=elastic.fit10$bestTune$lambda)
+
+lm.damage.nopar <- lm(log(damage) ~ season + month + nature + maxspeed + meanspeed + percent_usa, data= hurricaneOutcome1)
+summary(lm.damage.nopar)
 
 ```
-## Elastic for death
+## Elastic for damage with parameter information
 ```{r}
 set.seed(1)
-
-elastic.fit2 <- train(deaths~.,
-                   data=hurricaneOutcome2,
+hurricane43.infor1 <- hurricane43.infor %>% select(-deaths)
+elastic.fit11 <- train(log(damage)~.,
+                   data=hurricane43.infor1,
                    method="glmnet",
                    tuneGrid=expand.grid(alpha=seq(0,1,length=21),
-                                        lambda=exp(seq(5,-1,length=100))),
+                                        lambda=exp(seq(3,-5,length=100))),
                    trControl=ctrl1)
 
-elastic.fit2$bestTune
+elastic.fit11$bestTune
 
 myCol <- rainbow(25)
 myPar <- list(superpose.symbol=list(col=myCol),
               superpose.line=list(col=myCol))
-plot(elastic.fit2,par.settings=myPar)
+plot(elastic.fit11,par.settings=myPar)
 
 
 
-coef(elastic.fit2$finalModel,s=elastic.fit2$bestTune$lambda)
+coef(elastic.fit11$finalModel,s=elastic.fit11$bestTune$lambda)
+
+lm.damage.par <- lm(log(damage) ~ season + nature + maxspeed + meanspeed + percent_usa + beta4, data= hurricane43.infor1)
+summary(lm.damage.par)
 
 
 ```
 
+## Elastic for death without parameter information
+```{r}
+set.seed(1)
+
+elastic.fit20 <- train(log(deaths)~.,
+                   data=hurricaneOutcome2,
+                   method="glmnet",
+                   tuneGrid=expand.grid(alpha=seq(0,1,length=21),
+                                        lambda=exp(seq(7,-4,length=100))),
+                   trControl=ctrl1)
+
+elastic.fit20$bestTune
+
+myCol <- rainbow(25)
+myPar <- list(superpose.symbol=list(col=myCol),
+              superpose.line=list(col=myCol))
+plot(elastic.fit20,par.settings=myPar)
+
+
+
+coef(elastic.fit20$finalModel,s=elastic.fit20$bestTune$lambda)
+
+lm.death.nopar <- lm(log(deaths) ~ maxspeed + meanspeed + maxpressure +  percent_poor,hurricaneOutcome2)
+summary(lm.death.nopar)
+
+
+```
+
+## Elastic for death with parameter information
+```{r}
+set.seed(2)
+hurricane43.infor2 <- hurricane43.infor %>% select(-damage)
+elastic.fit21 <- train(log(deaths)~.,
+                   data=hurricane43.infor2,
+                   method="glmnet",
+                   preProcess = c("center","scale"),
+                   tuneGrid=expand.grid(alpha=seq(0,1,length=21),
+                                        lambda=exp(seq(3,-5,length=100))),
+                   trControl=ctrl1)
+
+
+
+elastic.fit21$bestTune
+
+myCol <- rainbow(25)
+myPar <- list(superpose.symbol=list(col=myCol),
+              superpose.line=list(col=myCol))
+plot(elastic.fit21,par.settings=myPar)
+
+coef(elastic.fit21$finalModel,s=elastic.fit21$bestTune$lambda)
+
+lm.death.par <- lm(log(deaths) ~ maxpressure + percent_poor ,hurricane43.infor2)
+summary(lm.death.par)
+
+```
