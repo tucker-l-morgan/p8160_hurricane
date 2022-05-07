@@ -109,7 +109,7 @@ Finally, parameter $\Sigma$ has the conditional posterior:
 \end{align}
 Thus,
 $$ \Sigma \sim \mathcal W_d^{-1} (\Psi, v),$$
-where $v = d+1+n$, and $\Psi = I + \sum_{i = 1}^{n}(\beta_i - \beta)^{T}(\beta_i - \beta)$.
+where $v = 3d+3+n$, and $\Psi = I + \sum_{i = 1}^{n}(\beta_i - \beta)^{T}(\beta_i - \beta)$.
 
 
 ## 2.3. Gibbs Sampling Algorithm
@@ -195,10 +195,6 @@ $$Y_{i}(t+6) =\beta_{0,i}+\beta_{1,i}Y_{i}(t) + \beta_{2,i}\Delta_{i,1}(t)+
 \beta_{3,i}\Delta_{i,2}(t) +\beta_{4,i}\Delta_{i,3}(t)  + \epsilon_{i}(t)$$
 
 ```{r plotting mse}
-mse_vec <- data.frame(do.call(rbind, mse)) %>% 
-  rename(mse = 1) %>% 
-  mutate(rmse = sqrt(mse))
-
 rel_error_vec <- data.frame(do.call(rbind, rel_error)) %>% 
   rename(rel_error = 1)
 
@@ -217,15 +213,17 @@ We can use time variables to examine seasonal differences between hurricanes as 
 
 ## 3.4. Analyzing Damage Caused by Hurricanes
 
+(to be added)
+
 # 4. Discussion
 
-In **Figure 2** we see the distribution of $\beta_i$ estimates across the population of hurricanes. Some of these coefficients, like $\beta_1$ and $\beta_4$, do not differ much across the population, having a narrow range of values. This indicates the effect of wind speed at time $t$ and the effect of change in wind speed from time $t-6$ to $t$ on future wind speed do not vary much between hurricanes. The larger variance of $\beta_2$ and $\beta_3$ indicates the effect of change in position (latitude and longitude) on future wind speed varies more among the population of hurricanes. This makes sense because change in position can have a different effect on wind speed depending on the location of the hurricane. Hurricanes typically weaken closer to land, therefore change in location may have a different effect on wind speed depending on how close the hurricane is to land **[1]**.
+In **Figure 2** we see the distributions of $\beta_i$ estimates across the population of hurricanes. Some of these coefficients, like $\beta_1$ and $\beta_4$, have a relatively narrow range of values. This indicates the effect of wind speed at time $t$ and the effect of change in wind speed from time $t-6$ to $t$ on future wind speed do not vary much between hurricanes. The larger variance of $\beta_2$ and $\beta_3$ indicates the effect of change in position (latitude and longitude) on future wind speed varies more among the population of hurricanes. This makes sense because change in position can have a different effect on wind speed depending on the location of the hurricane. Hurricanes typically weaken closer to land, therefore change in location may have a different effect on wind speed depending on how close the hurricane is to land **[1]**.
 
-Lastly, we see that $\beta_0$ has a larger magnitude of effect on future wind speed and a similar variance to $\beta_2$ and $\beta_3$. This indicates there are hurricane characteristics not captured in our model that have an influence on future wind speed, and these underlying characteristics differ among the population of hurricanes.
+Lastly, we see that $\beta_0$ has a larger magnitude of effect on future wind speed. This indicates there are hurricane characteristics not captured in our model that have an influence on future wind speed, and these underlying characteristics differ among the population of hurricanes. As an example of something not captured in this model, wind temperature tends to have influence on the intensity of hurricanes and might play a role in this model.
 
 ## 4.1. Limitations
 
-There are a few limitations in the model estimation technique here. First, Bayesian models can be sensitive to the selection of prior distributions. The assumption of prior distributions in this scenario were non-informative or weak, however different prior distributions may change results. Additionally, the Gibbs sampling technique may fail under certain conditions. For instance, if the conditional posterior distributions result in extreme probability states, Gibbs sampling may become "trapped" in one of the high-probability conditions. Additionally, Gibbs sampling requires knowledge of conditional posterior distributions, however these distributions can be difficult to derive or intractable in some cases.
+There are a few limitations in the model estimation technique. First, Bayesian models are sensitive to the selection of prior distributions. The assumption of prior distributions in this scenario were non-informative or weak, however different prior distributions may change results. Additionally, the Gibbs sampling technique may fail under certain conditions. For instance, if the conditional posterior distributions result in extreme probability states, Gibbs sampling may become "trapped" in one of the high-probability conditions. Additionally, Gibbs sampling requires knowledge of conditional posterior distributions, however these distributions can be difficult to derive or intractable in some cases.
 
 ## 4.2. Strengths
 
