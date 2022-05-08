@@ -22,7 +22,7 @@ Hurricanes are dangerous and can cause major damage from storm surge, wind damag
 
 In this study, two data sets were explored. In the first part, we attempted to use the track data of 703 hurricanes in the North Atlantic area since 1950 to explore the seasonal differences and if there is any evidence showing that the hurricane wind speed has been increasing over years. First, we calculated the posterior distribution of four parameters $( B, \beta, \sigma^{2}, \Sigma^{-1})$ in proposed Bayesian model. Next, we designed an MCMC algorithm to generate the posterior distribution. Then, we used the MCMC chain we developed to estimate the parameters, and checked to see how well the model fits the data.
 
-Furthermore, in order to forecast hurricane damage and deaths, another data set containing the damages and deaths caused by 46 hurricanes in the United States were used. We constructed a model and to determine which traits of hurricanes are more associated to damage and deaths.   
+Furthermore, in order to forecast hurricane damage and deaths, another data set containing the damages and deaths caused by 46 hurricanes in the United States were used. We constructed a model to determine which traits of hurricanes are more associated to damage and deaths.   
 
 # 2. Methods
 
@@ -136,6 +136,8 @@ Now that we have conditional posterior distributions for each of our parameters,
 
 to yield $\Theta_j$. As $j$ increases and the Markov Chain continues, estimates stabilize, and we can obtain our results by taking the mean of the Gibbs-generated parameters. Example code for this algorithm cane be seen in **Appendix A**.
 
+\newpage
+
 # 3. Results 
 
 ```{r loading in estimates, include = FALSE}
@@ -198,6 +200,8 @@ sigma_est %>%
 
 acf(sigma2_vec, pl = TRUE, main = "Figure 3: Autocorrelation of Sigma^2 Markov Chain")
 ```
+
+\newpage
 
 ## 3.2. Bayesian Model Predictions
 
@@ -325,18 +329,88 @@ Lastly, we find similar results for average wind speed over time. The months of 
 
 ## 3.4. Analyzing Damage and Deaths Caused by Hurricanes
 
-For analyzing $Damage$ and $Deaths$ caused by 43 Hurricanes, we fitted the Elastic Net model to perform variable selection. 
-According to the histogram of $Damage$, we find that it is not normally distributed, then we transformed the responses variable by logging it to make the distribution closer to normal. 
-According to the result, $Season$, $Maximum recorded wind speed of the hurricane$ and $percentage affected population that resides in the United States$ are three major characteristics related to damage caused by hurricanes. While `season`, `maxspeed` and `percent_usa` increase, the average of damage would increase. The average damage increase `r exp(0.045634), `r exp(0.022327)`, `r exp(0.007746)` separately with one unit increase in `season`, `maxspeed` and `percent_usa`. The mean square error is`r mean(lm.damage.par$residuals^2)`.
-For `deaths`, although it is count numbers and could only be integers, we also log the response to ensure the distribution is closer to normal. For `deaths`, we centralized all the parameters to keep consistency. According to model results, `maxpressure` and `percent_poor` are two important parameters. With `maxpressure` decreases, the average number of death increase since the lower the maximum pressure the more severe hurricane is. As `percent_poor` increases, the average number of deaths increases. The average number of deaths increases `r exp(3.785e-02)` with one unit increases in `percent_poor`. The mean square error is `r mean(lm.death.par$residuals^2)`.
+For analyzing damage and deaths caused by 43 hurricanes, we fit the Elastic Net model to perform variable selection.
+
+According to **Figure 7**, we find that damage is not normally distributed; therefore, we took the log of damage to be our response variable, which makes the distribution closer to normal. 
+
+```{r damage and death analysis, message = FALSE, warning = FALSE}
+# loading in data
+hurricaneOutcome <- read.csv("data/hurricaneoutcome2.csv") %>% janitor::clean_names() %>%  
+                    mutate(damage=substr(damage,start=2,stop=10),
+                           month=match(month,month.name),
+                           damage=as.numeric(damage),
+                           deaths=str_remove(deaths,","),
+                           deaths=as.numeric(deaths),
+                           nature=as.factor(nature))
+rownames(hurricaneOutcome) <- hurricaneOutcome$hurrican_id
+hurricane702 <- read_csv("./data/hurricane703.csv") %>% mutate(ID=tolower(ID))
+hurricane43 <- subset(hurricane702,ID %in%rownames(hurricaneOutcome)) 
+# data preparation
+B_est2 <- Reduce("+", B_res_list[501:1000]) / length(B_res_list[501:1000])
+colnames(B_est2) <- c('beta0', 'beta1' ,'beta2', 'beta3', 'beta4')
+
+extra_df <- read_csv("./data/hurricane703.csv") %>%
+  janitor::clean_names() %>% 
+  drop_na() %>% 
+  group_by(id) %>% 
+  dplyr::select(id) %>% 
+  filter(n() > 2) %>% 
+  filter(row_number() == 1) %>% 
+  mutate(id=tolower(id))
+
+rownames(extra_df) <- extra_df$id
+
+B_est_res <- data.frame(cbind(rownames(extra_df),B_est2)) %>% filter(V1 %in% rownames(hurricaneOutcome))
+
+
+hurricane43.infor <- cbind(hurricaneOutcome,B_est_res) %>% select(-V1,-hurrican_id) %>% 
+                      mutate(beta0=as.numeric(beta0),
+                             beta1=as.numeric(beta1),
+                             beta2=as.numeric(beta2),
+                             beta3=as.numeric(beta3),
+                             beta4=as.numeric(beta4)
+                             )
+
+damage_plot <- 
+  ggplot(data = hurricane43.infor, aes(x = damage)) +
+  geom_histogram(bins = 20, alpha = 0.7, fill = "darkgreen") +
+  labs(x = "Damage (in Billion USD)",
+       y = "")
+death_plot <- 
+  ggplot(data = hurricane43.infor, aes(x = deaths)) +
+  geom_histogram(bins = 20, alpha = 0.7, fill = "navy") +
+  labs(x = "Number of Deaths",
+       y = "")
+
+damage_plot + death_plot +
+  plot_annotation(title = "Figure 7: Damage and Deaths Caused by Hurricanes")
+```
+
+```{r storing damage and death models}
+hurricane43.infor1 <- hurricane43.infor %>% select(-deaths)
+lm.damage.par <- lm(log(damage) ~ season + nature + maxspeed + meanspeed + percent_usa + beta4, data = hurricane43.infor1)
+
+hurricane43.infor2 <- hurricane43.infor %>% select(-damage)
+lm.death.par <- lm(log(deaths) ~ maxpressure + percent_poor, hurricane43.infor2)
+```
+
+According to the result, season (or year), maximum recorded wind speed of the hurricane, and percentage affected population that resides in the United States are three statistically significant characteristics related to damage caused by hurricanes. When season, max speed, and percent of USA increase, the average of damage is expected to increase. The average damage increases by `r round(exp(0.045634), digits = 4)`, `r round(exp(0.022327), digits = 4)`, `r round(exp(0.007746), digits = 4)` with one unit increase in season, max speed and percent of USA, respectively. We see mean wind speed is positively associated with average damage while $\beta_4$, or the effect of previous wind speed change on future wind speed, is negatively associated. We also see that not rated hurricanes and tropical storms tend to cause less damage than other types of hurricanes. However, these coefficients are not statistically significant. The mean square error of the model is `r round(mean(lm.damage.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
+
+For deaths, although it is count data and could only be integers, we also log the response to ensure the distribution is closer to normal. For deaths, we centralized all the parameters to keep consistency. According to model results, max pressure and percent poor are two important parameters. When max pressure decreases, the average number of death increases, which makes sense because lower air pressure tends to be associated with more intense hurricanes **[1]**. The average number of deaths increases `r round(exp(3.785e-02), digits = 4)` with one unit increase in percent poor. The mean square error is `r round(mean(lm.death.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
+
+\newpage
 
 # 4. Discussion
 
-In **Figure 2** we see the distributions of $\beta_i$ estimates across the population of hurricanes. Some of these coefficients, like $\beta_1$ and $\beta_4$, have a relatively narrow range of values. This indicates the effect of wind speed at time $t$ and the effect of change in wind speed from time $t-6$ to $t$ on future wind speed do not vary much between hurricanes. The larger variance of $\beta_2$ and $\beta_3$ indicates the effect of change in position (latitude and longitude) on future wind speed varies more among the population of hurricanes. This makes sense because change in position can have a different effect on wind speed depending on the location of the hurricane. Hurricanes typically weaken closer to land, therefore change in location may have a different effect on wind speed depending on how close the hurricane is to land **[1]**.
+In **Figure 2** we see the distributions of $\beta_i$ estimates across the population of hurricanes. Some of these coefficients, like $\beta_1$ and $\beta_4$, have a relatively narrow range of values. This indicates the effect of wind speed at time $t$ and the effect of change in wind speed from time $t-6$ to $t$ on future wind speed do not vary much between hurricanes. The larger variance of $\beta_2$ and $\beta_3$ indicates the effect of change in position (latitude and longitude) on future wind speed varies more among the population of hurricanes. This makes sense because change in position can have a different effect on wind speed depending on the location of the hurricane. Hurricanes typically weaken closer to land, therefore change in location may have a different effect on wind speed depending on how close the hurricane is to land **[2]**.
 
 Lastly, we see that $\beta_0$ has a larger magnitude of effect on future wind speed. This indicates there are hurricane characteristics not captured in our model that have an influence on future wind speed, and these underlying characteristics differ among the population of hurricanes. As an example of something not captured in this model, wind temperature tends to have influence on the intensity of hurricanes and might play a role in this model.
 
 When examining trends across time, we did not see changes in $\beta_i$ coefficients in different months or years. This indicates the effects of change in position, change in wind speed, and previous wind speed do not significantly change for hurricanes at different times of year or in different years.
+
+We found that season (or year), max wind speed, mean wind speed, and percent of residents in USA to be positively associated with damage caused by hurricanes. These results align with our understanding of the nature of hurricanes - higher wind speeds can lead to more damage. Season (or year) is also positively associated with damage, which could mean that hurricane severity is increasing or it could be a reflection of an increase in value of property that can be damaged in affected areas. For instance, if a beach community receives investment and builds larger, more expensive buildings, a powerful hurricane could cause more damage simply because more property is there to be damaged. We also saw that $\beta_4$, the effect of change in wind speed on future wind speed, and type not rated and tropical storm tended to be negatively associated with damages.
+
+We found that max pressure of a hurricane was negatively associated with deaths. When air pressure decreases, the hurricane tends to intensify with higher winds; therefore a decrease in pressure would indicate a stronger hurricane and a higher potential for death. We saw the percentage of the affected population residing in low GDP countries (i.e., GDP per capita $\leq$ 10,000) was positively associated with deaths. This could be caused by poorer communities having fewer safety measures in place in the event of a hurricane or residents of these lower income areas may have less access to evacuation resources in the event of a hurricane. These results are important to consider when creating evacuation and storm-response policies in order to limit loss of property, or more importantly, loss of life.
 
 ## 4.1. Limitations
 
@@ -346,11 +420,11 @@ When evaluating prediction accuracy, we trained our model on the full data set a
 
 ## 4.2. Strengths
 
-The Gibbs sampling algorithm is relatively simple and easy to understand in concept. Additionally, we found the resulting Markov Chain stabilized relatively quickly, which can reduce the computational overhead required to perform this kind of estimation.
+The Gibbs sampling algorithm is relatively simple and easy to understand in concept. Additionally, we found the resulting Markov Chain stabilized relatively quickly, which can reduce the computational overhead required to perform this kind of estimation. Our results from sections 3.3 and 3.4 are easily interpretable due to the simplicity of models used, and our results align with what we know about hurricanes from outside sources (see References).
 
 ## 4.3. Future Work
 
-In the future, it would be interesting to include more variables that may have effects on hurricanes such as air temperature and time over water. Additionally, model evaluation could be improved by splitting data into training and testing sets.
+In the future, it would be interesting to include more variables that may have effects on hurricanes such as air temperature and time over water. Additionally, model evaluation could be improved by splitting data into training and testing sets. When examining damages caused by hurricanes, it would be interesting to examine damage per capita of the affected regions or damage per total asset value in affected areas. Similarly, it would potentially be more informative to examine death rates of hurricanes rather than the raw number of deaths.
 
 # Contributions
 
@@ -360,7 +434,9 @@ T.M. drafted posterior distribution of parameters and conducted evaluation of MC
 
 # References
 
-1. Interaction between a hurricane and the land. Hurricanes. (n.d.). Retrieved May 7, 2022, from http://www.hurricanescience.org/science/science/hurricaneandland/
+1. Hurricane Life Cycle. Hurricanes. (n.d.). Retrieved May 7, 2022, from http://www.hurricanescience.org/science/science/hurricanelifecycle/
+
+2. Interaction between a hurricane and the land. Hurricanes. (n.d.). Retrieved May 7, 2022, from http://www.hurricanescience.org/science/science/hurricaneandland/
 
 # Appendix
 
@@ -397,21 +473,36 @@ gibbs_function <- function(iter, start, data){
 ## Appendix B
 
 ```{r task 5 regression code, echo = TRUE, eval = FALSE}
-#beta0 regression
+# beta0 regression
 reg(y = beta0, month, year, type)
-#beta1 regression
+# beta1 regression
 reg(y = beta1, month, year, type)
-#beta2 regression
+# beta2 regression
 reg(y = beta2, month, year, type)
-#beta3 regression
+# beta3 regression
 reg(y = beta3, month, year, type)
-#beta4 regression
+# beta4 regression
 reg(y = beta4, month, year, type)
-#start_speed regression
+# start_speed regression
 reg(y = start_speed, month, year, type)
-#max_speed regression
+# max_speed regression
 reg(y = max_speed, month, year, type)
-#avg_speed regression
+# avg_speed regression
 reg(y = avg_speed, month, year, type)
+```
+
+## Appendix C
+
+```{r damage and death regression code, echo = TRUE, eval = FALSE}
+# model training using caret package
+train(log(damage)~.,
+      data = hurricane,
+      method = "glmnet",
+      tuneGrid=expand.grid(alpha = seq(0,1,length=21),
+                           lambda = exp(seq(3,-5,length=100))),
+      trControl = trainControl(method = "repeatedcv", number = 10, repeats = 5))
+# fitting model for damage with selected predictors
+lm(log(damage) ~ season + nature + maxspeed + meanspeed + percent_usa + beta4,
+   data = hurricane)
 ```
 
