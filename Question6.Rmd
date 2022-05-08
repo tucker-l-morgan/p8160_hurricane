@@ -94,6 +94,9 @@ hurricane43.infor <- cbind(hurricaneOutcome,B_est_res) %>% select(-V1,-hurrican_
 ```{r}
 set.seed(1)
 
+ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
+
+hurricaneOutcome1 <- hurricaneOutcome %>% select(-deaths)
 elastic.fit10 <- train(log(damage)~.,
                    data=hurricaneOutcome1,
                    method="glmnet",
@@ -147,7 +150,7 @@ summary(lm.damage.par)
 ## Elastic for death without parameter information
 ```{r}
 set.seed(1)
-
+hurricaneOutcome2 <- hurricaneOutcome %>% select(-damage)
 elastic.fit20 <- train(log(deaths)~.,
                    data=hurricaneOutcome2,
                    method="glmnet",
