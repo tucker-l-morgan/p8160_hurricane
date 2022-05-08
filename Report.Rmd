@@ -15,19 +15,22 @@ library(patchwork)
 # 1. Introduction
 
 ## 1.1. Background
+
 Hurricanes are dangerous and can cause major damage from storm surge, wind damage, rip currents and flooding. They can happen along any U.S. coast or in any territory in the Atlantic or Pacific oceans. The amount of damage depends on the strength of a storm and what it hits. High winds are one of the primary causes of hurricane-inflicted loss of life and property damage. For better planning and prevention ahead to secure people from destructive hurricanes, it is extremely important and necessary to explore trajectories of hurricanes and predict each hurricane's wind speed.
 
 ## 1.2. Objectives
+
 In this study, two data sets were explored. In the first part, we attempted to use the track data of 703 hurricanes in the North Atlantic area since 1950 to explore the seasonal differences and if there is any evidence showing that the hurricane wind speed has been increasing over years. First, we calculated the posterior distribution of four parameters $( B, \beta, \sigma^{2}, \Sigma^{-1})$ in proposed Bayesian model. Next, we designed an MCMC algorithm to generate the posterior distribution. Then, we used the MCMC chain we developed to estimate the parameters, and checked to see how well the model fits the data.
 
 Furthermore, in order to forecast hurricane damage and deaths, another data set containing the damages and deaths caused by 46 hurricanes in the United States were used. We constructed a model and to determine which traits of hurricanes are more associated to damage and deaths.   
 
 # 2. Methods
 
-## 2.1. Data Cleaning and Exploratory Analysis
-In this study, there are two data sets. First one contains 703 hurricanes in the North Atlantic since 1950. It recorded the location (longitude and latitude) and maximum wind speed every 6 hours for every hurricanes. There are 8 variables and 22038 observations.  
+## 2.1. Data
 
-The second data set contains the damages and deaths caused by 46 hurricanes in the United States. There are 14 variables and 43 observations. 
+In this study, there are two data sets. The first one contains 702 hurricanes in the North Atlantic since 1950 including the location (longitude and latitude) and maximum wind speed every 6 hours for each hurricane. There are 8 variables and 22038 observations in the original data set. Due to the lagged nature of the data, a hurricane needs at least 3 observations for the model; we removed three hurricanes with fewer than three observations. We created four new predictor variables: wind lag, latitude change, longitude change, and wind change for the further steps.       
+
+The second data set contains the damages and deaths caused by 43 hurricanes along with 14 variables. In order to predict the damage and deaths caused by hurricane, we combine information from our estimated Bayesian model with this data set by the ID of hurricanes.
 
 ## 2.2. Posterior Distributions
 
@@ -41,7 +44,6 @@ where $Y_{i}(t)$ the wind speed at time $t$ (i.e. 6 hours earlier),  $\Delta_{i,
 In the model,  $\boldsymbol{\beta}_{i} =  (\beta_{0,i},\beta_{1,i},...,\beta_{7,i})$ are the random coefficients associated the $i$th hurricane, we assume that 
 
 $$\boldsymbol{\beta}_{i} \sim \mathcal{N}(\boldsymbol{\beta}, \boldsymbol{\Sigma}),$$
-
 
 and we assume the following non-informative or weak prior distributions for $\sigma^2$, $\boldsymbol{\beta}$ and $\Sigma$.
 
