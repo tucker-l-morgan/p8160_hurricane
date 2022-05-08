@@ -325,7 +325,10 @@ Lastly, we find similar results for average wind speed over time. The months of 
 
 ## 3.4. Analyzing Damage and Deaths Caused by Hurricanes
 
-(to be added)
+For analyzing $Damage$ and $Deaths$ caused by 43 Hurricanes, we fitted the Elastic Net model to perform variable selection. 
+According to the histogram of $Damage$, we find that it is not normally distributed, then we transformed the responses variable by logging it to make the distribution closer to normal. 
+According to the result, $Season$, $Maximum recorded wind speed of the hurricane$ and $percentage affected population that resides in the United States$ are three major characteristics related to damage caused by hurricanes. While `season`, `maxspeed` and `percent_usa` increase, the average of damage would increase. The average damage increase `r exp(0.045634), `r exp(0.022327)`, `r exp(0.007746)` separately with one unit increase in `season`, `maxspeed` and `percent_usa`. The mean square error is`r mean(lm.damage.par$residuals^2)`.
+For `deaths`, although it is count numbers and could only be integers, we also log the response to ensure the distribution is closer to normal. For `deaths`, we centralized all the parameters to keep consistency. According to model results, `maxpressure` and `percent_poor` are two important parameters. With `maxpressure` decreases, the average number of death increase since the lower the maximum pressure the more severe hurricane is. As `percent_poor` increases, the average number of deaths increases. The average number of deaths increases `r exp(3.785e-02)` with one unit increases in `percent_poor`. The mean square error is `r mean(lm.death.par$residuals^2)`.
 
 # 4. Discussion
 
