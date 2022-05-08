@@ -343,6 +343,10 @@ The Gibbs sampling algorithm is relatively simple and easy to understand in conc
 
 In the future, it would be interesting to include more variables that may have effects on hurricanes such as air temperature and time over water. Additionally, model evaluation could be improved by splitting data into training and testing sets.
 
+# Contributions
+
+T.M. drafted posterior distribution of parameters and conducted evaluation of MCMC model performance. Y.P. revised posterior distribution, derived conditional distributions, and analyzed trends of coefficients and hurricane speeds across time. T.M. with Y.P. designed MCMC algorithm in R using Gibbs sampling method to estimate parameters. J.L., W.C., and X.M. built models to analyze damages and deaths caused by hurricanes. T.M., J.L., W.C., X.M., Y.P. drafted the report with T.M. and Y.P. editing it.
+
 \newpage
 
 # References
