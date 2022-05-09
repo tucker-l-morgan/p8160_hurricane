@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(sqldf)
 library(patchwork)
+library(scales)
 ```
 
 # 1. Introduction
@@ -226,6 +227,50 @@ ggplot(data = rel_error_vec, aes(x = rel_error)) +
 
 Our model performed somewhat well predicting $Y_{i}(t+6)$ with most of our predictions yielding a normalized root-mean-squared-error (RMSE) of less than 0.1. However, there are a few instances of very poor predictions with a normalized RMSE of greater than 0.3.
 
+```{r prediction}
+record4 <- read_csv("./data/hurricane703.csv") %>%
+  janitor::clean_names() %>% 
+  group_by(id) %>% 
+  filter(n() > 2) %>% 
+  # create delta variables and wind lag - wind speed at time t, Y(t)
+  mutate(lat_change = c(NA, diff(latitude, lag = 1)), # I put zero for first entry, could be NA
+         lng_change = c(NA, diff(longitude, lag = 1)),
+         wind_change = c(NA, diff(wind_kt, lag = 1)),
+         wind_lag = lag(wind_kt, n = 1)) %>%
+  mutate(lat_change = lag(lat_change, n = 1),
+         lng_change = lag(lng_change, n = 1),
+         wind_change = lag(wind_change, n = 1)) %>% 
+  dplyr::select(id, wind_lag, lat_change, lng_change, wind_change, wind_kt) %>% 
+  drop_na() %>% 
+  filter(id == "ABLE.1950" | id == "BAKER.1950" | id == "CHARLIE.1950" | id == "DOG.1950")
+beta_i <- data.frame(cbind(c("ABLE.1950", "BAKER.1950", "CHARLIE.1950", "DOG.1950"), B_est[1:4,]))
+
+# join tables
+join4 <- sqldf("SELECT r.id AS id, wind_lag, lat_change, lng_change, wind_change, wind_kt, X2 AS beta0, X3 AS beta1, X4 AS beta2, X5 AS beta3, X6 AS beta4
+              FROM record4 AS r
+              LEFT JOIN beta_i AS b
+              ON r.id = b.X1")
+# prediction and true value table
+pred_record <- sqldf("SELECT id, (beta0 + beta1*wind_lag + beta2*lat_change + beta3*lng_change + beta4*wind_change) AS prediction, wind_kt
+                     FROM join4") %>% 
+  group_by(id) %>% 
+  mutate(x_axis = 1:n()) %>% 
+  pivot_longer(prediction:wind_kt,
+               names_to = "type",
+               values_to = "wind_speed")
+
+pred_record1 <- pred_record %>% filter(id == "ABLE.1950")
+ggplot(data = pred_record, aes(x = x_axis, y = wind_speed, col = type)) + 
+  geom_line(position = "identity", size = 0.7) +
+  facet_wrap(~id, ncol = 2, scales = "free") +
+  labs(x = "Time",
+       y = "Wind Speed",
+       title = "Figure 5: Hurricane Trajectory Estimates") +
+  theme(legend.position = "right")
+```
+
+According to the first 4 hurricanes recorded, our model performs well when it estimates hurricanes' trajectories.
+
 ## 3.3. Changes in Hurricanes over Time
 
 ```{r creating graphs for time trends, include = FALSE}
@@ -314,14 +359,14 @@ Before performing regressions, we explored the overall trends of $\beta$ coeffic
 
 ```{r beta time plots, message = FALSE}
 beta_month_plot + beta_year_plot +
-  plot_annotation(title = "Figure 5: Beta Estimates Across Months and Years")
+  plot_annotation(title = "Figure 6: Beta Estimates Across Months and Years")
 ```
 
 Accordingly, we saw no significant relationship between time predictors and $\beta_0, \beta_2, \beta_3$ or $\beta_4$. There was a significant relationship between year and $\beta_1$, the effect of wind speed at time $t$, however the estimated coefficient is approximately $-3.7 \times 10^{-4}$, which is quite small. We did see a significant relationship between $\beta_2$ and $\beta_3$, the effect of change in latitude and change in longitude, and subtropical hurricanes compared to tropical storms. This could mean that the wind speed of subtropical hurricanes is more sensitive to changes in location than for tropical storms. In conclusion, we did not find any significant trends between our estimated $\beta_i$ coefficients and time - years and months. We could interpret this to mean that the effects of change in position, change in wind speed, and previous wind speed do not significantly change for hurricanes at different times.
 
 ```{r speed time plots, message = FALSE}
 speed_month_plot + speed_year_plot +
-  plot_annotation(title = "Figure 6: Hurricane Speed Across Months and Years")
+  plot_annotation(title = "Figure 7: Hurricane Speed Across Months and Years")
 ```
 
 We did see changes in wind speed across months and years (see **Figure 6**). For starting wind speed of hurricanes, we saw significant relationships with the month of December compared to April. All months besides January showed increased starting wind speed compared to April. Extra-tropical hurricanes showed a statistically significantly higher starting speed compared to tropical storms, whereas disturbances and not rated hurricanes showed statistically significantly lower starting speed.
@@ -386,7 +431,7 @@ death_plot <-
        y = "")
 
 damage_plot + death_plot +
-  plot_annotation(title = "Figure 7: Damage and Deaths Caused by Hurricanes")
+  plot_annotation(title = "Figure 8: Damage and Deaths Caused by Hurricanes")
 ```
 
 ```{r storing damage and death models}
@@ -397,9 +442,9 @@ hurricane43.infor2 <- hurricane43.infor %>% select(-damage)
 lm.death.par <- lm(log(deaths) ~ maxpressure + percent_poor, hurricane43.infor2)
 ```
 
-According to the result, season (or year), maximum recorded wind speed of the hurricane, and percentage affected population that resides in the United States are three statistically significant characteristics related to damage caused by hurricanes. When season, max speed, and percent of USA increase, the average of damage is expected to increase. The average damage increases by `r round(exp(0.045634)-1, digits = 4)`, `r round(exp(0.022327)-1, digits = 4)`, `r round(exp(0.007746)-1, digits = 4)` with one unit increase in season, max speed and percent of USA, respectively. We see mean wind speed is positively associated with average damage while $\beta_4$, or the effect of previous wind speed change on future wind speed, is negatively associated. We also see that not rated hurricanes and tropical storms tend to cause less damage than other types of hurricanes. However, these coefficients are not statistically significant. The mean square error of the model is `r round(mean(lm.damage.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
+According to the result, season (or year), maximum recorded wind speed of the hurricane, and percentage affected population that resides in the United States are three statistically significant characteristics related to damage caused by hurricanes. When season, max speed, and percent of USA increase, the average of damage is expected to increase. The average damage increases by `r percent(exp(0.045634)-1, accuracy = 0.01)`, `r percent(exp(0.022327)-1, accuracy = 0.01)`, `r percent(exp(0.007746)-1, accuracy = 0.01)` with one unit increase in season, max speed and percent of USA, respectively. We see mean wind speed is positively associated with average damage while $\beta_4$, or the effect of previous wind speed change on future wind speed, is negatively associated. We also see that not rated hurricanes and tropical storms tend to cause less damage than other types of hurricanes. However, these coefficients are not statistically significant. The mean square error of the model is `r round(mean(lm.damage.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
 
-For deaths, we fit Poisson model since it's count data. According to model results, max pressure and percent poor are two important parameters. When max pressure decreases, the average number of death increases, which makes sense because lower air pressure tends to be associated with more intense hurricanes **[1]**. The average number of deaths increases `r round(exp(3.785e-02), digits = 4)` with one unit increase in percent poor. The mean square error is `r round(mean(lm.death.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
+For deaths, we fit Poisson model since it's count data. According to model results, max pressure and percent poor are two important parameters. When max pressure decreases, the average number of death increases, which makes sense because lower air pressure tends to be associated with more intense hurricanes **[1]**. The average number of deaths increases by `r percent(exp(3.785e-02)-1, accuracy = 0.01)` with one unit increase in percent poor. The mean square error is `r round(mean(lm.death.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
 
 \newpage
 
