@@ -227,7 +227,7 @@ ggplot(data = rel_error_vec, aes(x = rel_error)) +
 
 Our model performed somewhat well predicting $Y_{i}(t+6)$ with most of our predictions yielding a normalized root-mean-squared-error (RMSE) of less than 0.1. However, there are a few instances of very poor predictions with a normalized RMSE of greater than 0.3.
 
-```{r prediction}
+```{r prediction, message = FALSE}
 record4 <- read_csv("./data/hurricane703.csv") %>%
   janitor::clean_names() %>% 
   group_by(id) %>% 
