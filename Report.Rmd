@@ -20,9 +20,9 @@ Hurricanes are dangerous and can cause major damage from storm surge, wind damag
 
 ## 1.2. Objectives
 
-In this study, two data sets were explored. In the first part, we attempted to use the track data of 703 hurricanes in the North Atlantic area since 1950 to explore the seasonal differences and if there is any evidence showing that the hurricane wind speed has been increasing over years. First, we calculated the posterior distribution of four parameters $( B, \beta, \sigma^{2}, \Sigma^{-1})$ in proposed Bayesian model. Next, we designed an MCMC algorithm to generate the posterior distribution. Then, we used the MCMC chain we developed to estimate the parameters, and checked to see how well the model fits the data.
+In this study, two data sets were explored. In the first part, we attempted to use the track data of 702 hurricanes in the North Atlantic area since 1950 to explore the seasonal differences and if there is any evidence showing that the hurricane wind speed has been increasing over years. First, we derived the posterior distribution of four parameters $( B, \beta, \sigma^{2}, \Sigma^{-1})$ in proposed Bayesian model. Next, we designed a MCMC algorithm to generate the posterior distribution. Then, we used the Markov chain we developed to estimate the parameters, and checked to see how well the model fits the data.
 
-Furthermore, in order to forecast hurricane damage and deaths, another data set containing the damages and deaths caused by 46 hurricanes in the United States were used. We constructed a model to determine which traits of hurricanes are more associated to damage and deaths.   
+Furthermore, in order to forecast hurricane damage and deaths, another data set containing the damages and deaths caused by 43 hurricanes in the United States were used. We constructed a model to determine which traits of hurricanes are associated to damage and deaths.   
 
 # 2. Methods
 
@@ -39,11 +39,11 @@ The following Bayesian model was suggested.
 $$Y_{i}(t+6) =\beta_{0,i}+\beta_{1,i}Y_{i}(t) + \beta_{2,i}\Delta_{i,1}(t)+
 \beta_{3,i}\Delta_{i,2}(t) +\beta_{4,i}\Delta_{i,3}(t)  + \epsilon_{i}(t)$$  
 
-where $Y_{i}(t)$ the wind speed at time $t$ (i.e. 6 hours earlier),  $\Delta_{i,1}(t)$, $\Delta_{i,2}(t)$ and $\Delta_{i,3}(t)$ are the changes of latitude, longitude and wind speed between $t$ and $t-6$, and $\epsilon_{i,t}$ follows a  normal distributions with mean zero and variance $\sigma^2$, independent across $t$. 
+where $Y_{i}(t)$ the wind speed at time $t$ (i.e. 6 hours earlier),  $\Delta_{i,1}(t)$, $\Delta_{i,2}(t)$ and $\Delta_{i,3}(t)$ are the changes of latitude, longitude and wind speed between $t$ and $t-6$, and $\epsilon_{i,t}$ follows a normal distributions with mean zero and variance $\sigma^2$, independent across $t$. 
 
-In the model,  $\boldsymbol{\beta}_{i} =  (\beta_{0,i},\beta_{1,i},...,\beta_{7,i})$ are the random coefficients associated the $i$th hurricane, we assume that 
+In the model, $\boldsymbol{\beta}_{i} =  (\beta_{0,i},\beta_{1,i},...,\beta_{7,i})$ are the random coefficients associated the $i$th hurricane, we assume that 
 
-$$\boldsymbol{\beta}_{i} \sim \mathcal{N}(\boldsymbol{\beta}, \boldsymbol{\Sigma}),$$
+$$\boldsymbol{\beta}_{i} \sim \mathcal{N}(\boldsymbol{\beta}, \boldsymbol{\Sigma})$$,
 
 and we assume the following non-informative or weak prior distributions for $\sigma^2$, $\boldsymbol{\beta}$ and $\Sigma$.
 
@@ -55,8 +55,11 @@ $d$ is dimension of $\beta$.
 Note from given Bayesian model:
 
 $$\epsilon_i(t) = Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,i}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \stackrel{i.i.d}{\sim} N(0, \sigma^2)$$
+
 $$\text{or}$$
+
 $$(Y_i(t+6) \mid  \boldsymbol{X}_i(t),\ \boldsymbol{\beta}_i) {\sim} N(\boldsymbol{X}_i(t)\boldsymbol{\beta}_i^{T}, \sigma^2)$$
+
 where $\boldsymbol{X}_i(t) = (1, Y_i(t), \Delta_{i,1}(t), \Delta_{i,2}(t), \Delta_{i,3}(t))$, and $\boldsymbol{\beta}_i = (\beta_{0,i}, \beta_{1,i}, \beta_{2,i}, \beta_{3,i}, \beta_{4,i})$. Therefore,
 
 $$f_{Y_i(t+6)}(y_i(t+6) \mid \boldsymbol{X}_i(t), \boldsymbol{\beta}_i,  \sigma^2) = \frac{1}{\sqrt{2\pi}\sigma} \exp\Big\{-\frac{1}{2\sigma^2}\Big(y_i(t+6) - \boldsymbol{X}_i(t)\boldsymbol{\beta}_i^{T}\Big)^2 \Big\}$$
@@ -131,7 +134,7 @@ Now that we have conditional posterior distributions for each of our parameters,
   \item[1.] Generate $\boldsymbol{\beta}_j$ from $\pi(\boldsymbol{\beta} \mid \Sigma = \Sigma_{j-1}, \sigma^2 = \sigma^2_{j-1}, \textbf{B} =\textbf{B}_{j-1})$;
   \item[2.] Generate $\Sigma_j$ from $\pi(\Sigma \mid \boldsymbol{\beta} = \boldsymbol{\beta}_j, \sigma^2 = \sigma^2_{j-1}, \textbf{B} = \textbf{B}_{j-1})$;
   \item[3.] Generate $\sigma^2$ from $\pi(\sigma^2 \mid \boldsymbol{\beta} = \boldsymbol{\beta}_j, \Sigma = \Sigma_j, \textbf{B} = \textbf{B}_{j-1})$;
-  \item[4.] Generate \textbf{B} from $\pi(\textbf{B} \mid \boldsymbol{\beta} = \boldsymbol{\beta}_j, \Sigma = \Sigma_j \sigma^2 = \sigma^2_j)$
+  \item[4.] Generate \textbf{B} from $\pi(\textbf{B} \mid \boldsymbol{\beta} = \boldsymbol{\beta}_j, \Sigma = \Sigma_j,  \sigma^2 = \sigma^2_j)$
 \end{enumerate}
 
 to yield $\Theta_j$. As $j$ increases and the Markov Chain continues, estimates stabilize, and we can obtain our results by taking the mean of the Gibbs-generated parameters. Example code for this algorithm cane be seen in **Appendix A**.
@@ -394,9 +397,9 @@ hurricane43.infor2 <- hurricane43.infor %>% select(-damage)
 lm.death.par <- lm(log(deaths) ~ maxpressure + percent_poor, hurricane43.infor2)
 ```
 
-According to the result, season (or year), maximum recorded wind speed of the hurricane, and percentage affected population that resides in the United States are three statistically significant characteristics related to damage caused by hurricanes. When season, max speed, and percent of USA increase, the average of damage is expected to increase. The average damage increases by `r round(exp(0.045634), digits = 4)`, `r round(exp(0.022327), digits = 4)`, `r round(exp(0.007746), digits = 4)` with one unit increase in season, max speed and percent of USA, respectively. We see mean wind speed is positively associated with average damage while $\beta_4$, or the effect of previous wind speed change on future wind speed, is negatively associated. We also see that not rated hurricanes and tropical storms tend to cause less damage than other types of hurricanes. However, these coefficients are not statistically significant. The mean square error of the model is `r round(mean(lm.damage.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
+According to the result, season (or year), maximum recorded wind speed of the hurricane, and percentage affected population that resides in the United States are three statistically significant characteristics related to damage caused by hurricanes. When season, max speed, and percent of USA increase, the average of damage is expected to increase. The average damage increases by `r round(exp(0.045634)-1, digits = 4)`, `r round(exp(0.022327)-1, digits = 4)`, `r round(exp(0.007746)-1, digits = 4)` with one unit increase in season, max speed and percent of USA, respectively. We see mean wind speed is positively associated with average damage while $\beta_4$, or the effect of previous wind speed change on future wind speed, is negatively associated. We also see that not rated hurricanes and tropical storms tend to cause less damage than other types of hurricanes. However, these coefficients are not statistically significant. The mean square error of the model is `r round(mean(lm.damage.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
 
-For deaths, although it is count data and could only be integers, we also log the response to ensure the distribution is closer to normal. For deaths, we centralized all the parameters to keep consistency. According to model results, max pressure and percent poor are two important parameters. When max pressure decreases, the average number of death increases, which makes sense because lower air pressure tends to be associated with more intense hurricanes **[1]**. The average number of deaths increases `r round(exp(3.785e-02), digits = 4)` with one unit increase in percent poor. The mean square error is `r round(mean(lm.death.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
+For deaths, we fit Poisson model since it's count data. According to model results, max pressure and percent poor are two important parameters. When max pressure decreases, the average number of death increases, which makes sense because lower air pressure tends to be associated with more intense hurricanes **[1]**. The average number of deaths increases `r round(exp(3.785e-02), digits = 4)` with one unit increase in percent poor. The mean square error is `r round(mean(lm.death.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
 
 \newpage
 
