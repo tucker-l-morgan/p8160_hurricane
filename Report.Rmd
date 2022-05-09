@@ -420,7 +420,7 @@ When evaluating prediction accuracy, we trained our model on the full data set a
 
 ## 4.2. Strengths
 
-The Gibbs sampling algorithm is relatively simple and easy to understand in concept. Additionally, we found the resulting Markov Chain stabilized relatively quickly, which can reduce the computational overhead required to perform this kind of estimation. Our results from sections 3.3 and 3.4 are easily interpretable due to the simplicity of models used, and our results align with what we know about hurricanes from outside sources (see References).
+One important decision in Bayesian analysis is the assumption of prior distributions. In this application, we assume uninformative or weak prior distributions, so we do not assume too much prior knowledge. Additionally, we found the resulting Markov Chain stabilized relatively quickly, which can reduce the computational overhead required to perform this kind of estimation. Our results from sections 3.3 and 3.4 are easily interpreted due to the simplicity of models used, and our results align with what we know about hurricanes from outside sources (see References).
 
 ## 4.3. Future Work
 
