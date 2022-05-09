@@ -269,7 +269,7 @@ ggplot(data = pred_record, aes(x = x_axis, y = wind_speed, col = type)) +
   theme(legend.position = "right")
 ```
 
-According to the first 4 hurricanes recorded, our model performs well when it estimates hurricanes' trajectories.
+According to the first 4 hurricanes recorded (see **Figure 5**), our model performs well when it estimates hurricanes' trajectories.
 
 ## 3.3. Changes in Hurricanes over Time
 
@@ -355,7 +355,7 @@ speed_year_plot <- ggplot(speed_year, aes(x = year, y = speed, color = speed_typ
 
 We can use time variables to examine seasonal differences between hurricanes as well as changes over years. Let $x_{i,1}$ be the month of year when the i-th hurricane began, $x_{i,2}$ be the calendar year in which hurricane i began, and $x_{i,3}$ be the type of the i-th hurricane. Using code similar to that in **Appendix B**, we performed linear regression with $x_{i,1}, x_{i,2},$ and $x_{i,3}$ as predictors of each $\boldsymbol{\beta}_i$ coefficient. For these regressions, our data begins in April and progresses through January to align with typical "hurricane seasons". Note there were no hurricanes observed in February and March.
 
-Before performing regressions, we explored the overall trends of $\beta$ coefficients over time. In **Figure 5**, we can see there are no clear changes in $\beta$ values across months or across years.
+Before performing regressions, we explored the overall trends of $\beta$ coefficients over time. In **Figure 6**, we can see there are no clear changes in $\beta$ values across months or across years.
 
 ```{r beta time plots, message = FALSE}
 beta_month_plot + beta_year_plot +
@@ -369,17 +369,17 @@ speed_month_plot + speed_year_plot +
   plot_annotation(title = "Figure 7: Hurricane Speed Across Months and Years")
 ```
 
-We did see changes in wind speed across months and years (see **Figure 6**). For starting wind speed of hurricanes, we saw significant relationships with the month of December compared to April. All months besides January showed increased starting wind speed compared to April. Extra-tropical hurricanes showed a statistically significantly higher starting speed compared to tropical storms, whereas disturbances and not rated hurricanes showed statistically significantly lower starting speed.
+We did see changes in wind speed across months and years (see **Figure 7**). For starting wind speed of hurricanes, we saw significant relationships with the month of December compared to April. All months besides January showed increased starting wind speed compared to April. Extra-tropical hurricanes showed a statistically significantly higher starting speed compared to tropical storms, whereas disturbances and not rated hurricanes showed statistically significantly lower starting speed.
 
 For max speed, the later months (July through December) tend to have higher max speeds compared to April, however these are not statistically significant. Despite what some may claim - that wind speed has increased over the years - we find a statistically significant relationship between year and max wind speed indicating that wind speed decreases as year increases. We also find max wind speed is statistically significantly lower for sub-tropical hurricanes compared to tropical storms.
 
-Lastly, we find similar results for average wind speed over time. The months of June through December tend to have higher wind speed compared to April, however this is not statistically significant. Again, we see a statistically significant result that average wind speed tends to decrease as year increases. These trends can be seen in **Figure 6**.
+Lastly, we find similar results for average wind speed over time. The months of June through December tend to have higher wind speed compared to April, however this is not statistically significant. Again, we see a statistically significant result that average wind speed tends to decrease as year increases. These trends can be seen in **Figure 7**.
 
 ## 3.4. Analyzing Damage and Deaths Caused by Hurricanes
 
 For analyzing damage and deaths caused by 43 hurricanes, we fit the Elastic Net model to perform variable selection.
 
-According to **Figure 7**, we find that damage is not normally distributed; therefore, we took the log of damage to be our response variable, which makes the distribution closer to normal. 
+According to **Figure 8**, we find that damage is not normally distributed; therefore, we took the log of damage to be our response variable, which makes the distribution closer to normal. 
 
 ```{r damage and death analysis, message = FALSE, warning = FALSE}
 # loading in data
@@ -476,7 +476,7 @@ In the future, it would be interesting to include more variables that may have e
 
 # Contributions
 
-T.M. drafted posterior distribution of parameters and conducted evaluation of MCMC model performance. Y.P. revised posterior distribution, derived conditional distributions, and analyzed trends of coefficients and hurricane speeds across time. T.M. with Y.P. designed MCMC algorithm in R using Gibbs sampling method to estimate parameters. J.L., W.C., and X.M. built models to analyze damages and deaths caused by hurricanes. T.M., J.L., W.C., X.M., Y.P. drafted the report with T.M. and Y.P. editing it.
+T.M. drafted posterior distribution of parameters and conducted evaluation of MCMC model performance. Y.P. revised posterior distribution, derived conditional distributions, and analyzed trends of coefficients and hurricane speeds across time. T.M. with Y.P. designed MCMC algorithm in R using Gibbs sampling method to estimate parameters. J.L., W.C., and X.M. built models to analyze damages and deaths caused by hurricanes. T.M., J.L., W.C., X.M., and Y.P. drafted the report with T.M. and Y.P. editing it.
 
 \newpage
 
