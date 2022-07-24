@@ -1,0 +1,556 @@
+---
+title: "P8160 - Hurricane Project Report"
+author: "Yimiao Pang, Xiao Ma, Wen Cheng, Tucker Morgan, Jie Liu"
+date: "5/5/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(sqldf)
+library(patchwork)
+library(scales)
+```
+
+# 1. Introduction
+
+## 1.1. Background
+
+Hurricanes are dangerous and can cause major damage from storm surge, wind damage, rip currents and flooding. They can happen along any U.S. coast or in any territory in the Atlantic or Pacific oceans. The amount of damage depends on the strength of a storm and what it hits. High winds are one of the primary causes of hurricane-inflicted loss of life and property damage. For better planning and prevention ahead to secure people from destructive hurricanes, it is extremely important and necessary to explore trajectories of hurricanes and predict each hurricane's wind speed.
+
+## 1.2. Objectives
+
+In this study, two data sets were explored. In the first part, we attempted to use the track data of 702 hurricanes in the North Atlantic area since 1950 to explore the seasonal differences and if there is any evidence showing that the hurricane wind speed has been increasing over years. First, we derived the posterior distribution of four parameters $( B, \beta, \sigma^{2}, \Sigma^{-1})$ in proposed Bayesian model. Next, we designed a MCMC algorithm to generate the posterior distribution. Then, we used the Markov chain we developed to estimate the parameters, and checked to see how well the model fits the data.
+
+Furthermore, in order to forecast hurricane damage and deaths, another data set containing the damages and deaths caused by 43 hurricanes in the United States were used. We constructed a model to determine which traits of hurricanes are associated to damage and deaths.   
+
+# 2. Methods
+
+## 2.1. Data
+
+In this study, there are two data sets. The first one contains 702 hurricanes in the North Atlantic since 1950 including the location (longitude and latitude) and maximum wind speed every 6 hours for each hurricane. There are 8 variables and 22038 observations in the original data set. Due to the lagged nature of the data, a hurricane needs at least 3 observations for the model; we removed three hurricanes with fewer than three observations. We created four new predictor variables: wind lag, latitude change, longitude change, and wind change for the further steps.       
+
+The second data set contains the damages and deaths caused by 43 hurricanes along with 14 variables. In order to predict the damage and deaths caused by hurricane, we combine information from our estimated Bayesian model with this data set by the ID of hurricanes.
+
+## 2.2. Posterior Distributions
+
+The following Bayesian model was suggested.  
+
+$$Y_{i}(t+6) =\beta_{0,i}+\beta_{1,i}Y_{i}(t) + \beta_{2,i}\Delta_{i,1}(t)+
+\beta_{3,i}\Delta_{i,2}(t) +\beta_{4,i}\Delta_{i,3}(t)  + \epsilon_{i}(t)$$  
+
+where $Y_{i}(t)$ the wind speed at time $t$ (i.e. 6 hours earlier),  $\Delta_{i,1}(t)$, $\Delta_{i,2}(t)$ and $\Delta_{i,3}(t)$ are the changes of latitude, longitude and wind speed between $t$ and $t-6$, and $\epsilon_{i,t}$ follows a normal distributions with mean zero and variance $\sigma^2$, independent across $t$. 
+
+In the model, $\boldsymbol{\beta}_{i} =  (\beta_{0,i},\beta_{1,i},...,\beta_{7,i})$ are the random coefficients associated the $i$th hurricane, we assume that 
+
+$$\boldsymbol{\beta}_{i} \sim \mathcal{N}(\boldsymbol{\beta}, \boldsymbol{\Sigma})$$,
+
+and we assume the following non-informative or weak prior distributions for $\sigma^2$, $\boldsymbol{\beta}$ and $\Sigma$.
+
+$$P(\sigma^2) \propto \frac{1}{\sigma^2};\quad P(\boldsymbol{\beta})\propto 1;\quad P(\Sigma^{-1}) \propto 
+|\Sigma|^{-(d+1)} \exp(-\frac{1}{2}tr(\Sigma^{-1}))$$
+
+$d$ is dimension of $\beta$.
+
+Note from given Bayesian model:
+
+$$\epsilon_i(t) = Y_i(t+6) - \Big(\beta_{0,i} + \beta_{1,i}Y_i(t) + \beta_{2,i}\Delta_{i,1}(t) + \beta_{3,i}\Delta_{i,2}(t) + \beta_{4,i}\Delta_{i,3}(t)\Big) \stackrel{i.i.d}{\sim} N(0, \sigma^2)$$
+
+$$\text{or}$$
+
+$$(Y_i(t+6) \mid  \boldsymbol{X}_i(t),\ \boldsymbol{\beta}_i) {\sim} N(\boldsymbol{X}_i(t)\boldsymbol{\beta}_i^{T}, \sigma^2)$$
+
+where $\boldsymbol{X}_i(t) = (1, Y_i(t), \Delta_{i,1}(t), \Delta_{i,2}(t), \Delta_{i,3}(t))$, and $\boldsymbol{\beta}_i = (\beta_{0,i}, \beta_{1,i}, \beta_{2,i}, \beta_{3,i}, \beta_{4,i})$. Therefore,
+
+$$f_{Y_i(t+6)}(y_i(t+6) \mid \boldsymbol{X}_i(t), \boldsymbol{\beta}_i,  \sigma^2) = \frac{1}{\sqrt{2\pi}\sigma} \exp\Big\{-\frac{1}{2\sigma^2}\Big(y_i(t+6) - \boldsymbol{X}_i(t)\boldsymbol{\beta}_i^{T}\Big)^2 \Big\}$$
+for hurricane $i$ at time $t$. To show the likelihood function for hurricane $i$ across all time points, $t$, we can write the multivariate normal distribution
+$$(\boldsymbol{Y}_i \mid \boldsymbol{X}_i, \boldsymbol{\beta}_i, \sigma^2) \sim \mathcal{N}(\boldsymbol{X}_i\boldsymbol{\beta}_i^{T}, \sigma^2 I)$$
+
+where $Y_i$ is an $m_i$-dimensional vector and $\boldsymbol{X}_i$ is a $m_i \times d$ matrix. Finally, the joint likelihood function of all hurricanes can be expressed as
+$$L_{Y}(\textbf{B},  \sigma^2 I) = \prod_{i=1}^n \Big\{\det(2\pi\sigma^2 I)^{-\frac{1}{2}} \exp\Big(-\frac{1}{2}(\boldsymbol{Y}_i - \boldsymbol{X}_i\boldsymbol{\beta}_i^{T})^{T} (\sigma^2 I)^{-1}(\boldsymbol{Y}_i - \boldsymbol{X}_i\boldsymbol{\beta}_i^{T})\Big)\Big\},$$
+
+where $I$ is an identity matrix with dimension consistent with $Y_i$. We can find the posterior distribution for $\Theta$ by
+
+$$\pi(\textbf{B}, \boldsymbol{\beta}, \sigma^2, \Sigma^{-1} \mid Y) \propto L_{Y}(\textbf{B},  \sigma^2 I) \times \pi(\textbf{B} \mid \boldsymbol{\beta}, \Sigma^{-1}) \times \pi(\boldsymbol{\beta}) \times \pi(\sigma^2) \times \pi(\Sigma^{-1}),$$
+
+where $\pi(\textbf{B} \mid \boldsymbol{\beta},  \Sigma)$ is the joint multivariate normal density of $\beta$,
+
+$$\pi(\textbf{B} \mid \boldsymbol{\beta},  \Sigma^{-1}) = \prod_{i=1}^n \Big\{\det(2\pi\Sigma)^{-\frac{1}{2}} \exp(-\frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta}) \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^{T}) \Big\}.$$
+
+So we have the following joint posterior distribution of $\Theta$:
+
+$$\pi(\textbf{B}, \boldsymbol{\beta}, \sigma^2, \Sigma^{-1} \mid Y) \propto \prod_{i=1}^n \Big\{(2\pi\sigma^2)^{-m_i/2} \exp\big\{-\frac{1}{2}(\boldsymbol{Y}_i - \boldsymbol{X}_i\boldsymbol{\beta}_i^{T})^{T} (\sigma^2 I)^{-1}(\boldsymbol{Y}_i - \boldsymbol{X}_i\boldsymbol{\beta}_i^{T})\big\}\Big\}\\$$
+$$\times \prod_{i=1}^n \Big\{\det(2\pi\Sigma)^{-\frac{1}{2}} \exp\big\{-\frac{1}{2}(\boldsymbol{\beta}_i - \boldsymbol{\beta}) \Sigma^{-1}(\boldsymbol{\beta}_i - \boldsymbol{\beta})^{T}\big\}\Big\} \times \frac{1}{\sigma^2} \times |\Sigma|^{-(d+1)} \exp\big\{-\frac{1}{2}\Sigma^{-1}\big\}.$$
+
+We can use the joint posterior distribution to derive conditional posterior distributions for each of our parameters.
+
+Let $\tau = 1/\sigma^{2}$, then 
+$$(\tau|\boldsymbol{\beta}, \textbf{B}, \Sigma^{-1}, Y) \propto \tau^{1+\frac{\sum_{i = 1}^{n}m_i}{2}} exp(-\tau \times \frac{1}{2}\sum_{i = 1}^{n}(Y_i - X_i\beta_i^{T})^{T}(Y_i - X_i\beta_i^{T} )$$
+Thus, $\sigma^2$ is from inverse-gamma distribution
+$$(\sigma^2 \mid \boldsymbol{\beta}, \textbf{B}, \Sigma^{-1}, Y) \sim \text{Inv-Gamma}(\frac{\sum_{i = 1}^{n}m_i}{2},  \frac{1}{2}\sum_{i = 1}^{n}(Y_i - X_i\beta_i^{T})(Y_i - X_i\beta_i^{T}).$$
+
+Parameter \textbf{B} has the following conditional posterior:
+
+\begin{align}
+\pi (\textbf{B}| \boldsymbol{\beta}, \sigma^{2},\Sigma^{-1}, Y) 
+& \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} \left[ (Y_i - X_i\beta_i^{T})^{T}(\sigma^{2}I)^{-1}(Y_i - X_i\beta_i^{T})+(\beta_i - \beta)\Sigma^{-1}(\beta_1 - \beta)^{T} \right]) \\
+& \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} \left[ \beta_i(X_i^{T}(\sigma^{2}I)^{-1}X_i + \Sigma^{-1})\beta_i^{T} - 2\beta_i(X_i(\sigma^{2}I)^{-1})Y_i + \Sigma^{-1}\beta^{T} \right] )
+\end{align}
+
+Let $V_i = X_i^{T}(\sigma^{2}I)^{-1}X_i + \Sigma^{-1}$, and $U_i = X_i(\sigma^{2}I)^{-1}Y_i + \Sigma^{-1}\beta^{T}$, then
+
+$$(\boldsymbol{\beta}_i \mid \boldsymbol{\beta}, \Sigma^{-1}, \sigma^2, Y) \sim \mathcal MVN(V_i^{-1}U_i, V_i^{-1}).$$
+
+Similarly, parameter $\boldsymbol{\beta}$ has a conditional posterior of:
+
+\begin{align}
+\pi(\boldsymbol{\beta} | \textbf{B}, \sigma^{2},\Sigma^{-1}, Y) 
+& \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} (\beta_i - \beta)\Sigma^{-1}(\beta_i - \beta)^{T})\\
+& \propto exp(-\frac{1}{2}\sum_{i = 1}^{n} \left[ \beta \Sigma^{-1}\beta^{T} - 2\beta \Sigma^{-1} \beta_i^{T} \right] )
+\end{align}
+
+Let $V = n \Sigma^{-1}, U = \sum_{i = 1}^{n} \Sigma^{-1} \beta_i^{T}$, then
+
+$$ (\boldsymbol{\beta}| \textbf{B}, \sigma^{2},\Sigma^{-1}, Y) \sim \mathcal MVN(V^{-1}U, V^{-1}).$$
+
+Finally, parameter $\Sigma$ has the conditional posterior:
+
+\begin{align}
+\pi(\Sigma^{-1}| \boldsymbol{\beta}, \textbf{B}, \sigma^{2}, Y) 
+& \propto |\Sigma|^{-(d+1)}exp(-\frac{1}{2}tr(\Sigma^{-1})|\Sigma|^{-\frac{n}{2}} exp(-\frac{1}{2}\sum_{i = 1}^{n} (\beta_i - \beta)\Sigma^{-1}(\beta_i - \beta)^{T})\\
+& \propto |\Sigma^{-1}|^{d+1+\frac{n}{2}}exp(-\frac{1}{2} \left[ tr(\Sigma^{-1}) + tr(\sum^n_{i=1}(\beta_i - \beta)\Sigma^{-1}(\beta_i - \beta)^{T}) \right] \\
+& \propto |\Sigma^{-1}|^{3d+3+n-d-1} exp(-\frac{1}{2} tr( \left[ I + \sum_{i = 1}^{n}(\beta_i - \beta)^{T}(\beta_i - \beta) \right] \Sigma^{-1}))
+\end{align}
+
+Thus,
+$$ \Sigma^{-1} \sim \mathcal W_d (\Psi, v),$$
+where $v = 3d+3+n$, and $\Psi = I + \sum_{i = 1}^{n}(\beta_i - \beta)^{T}(\beta_i - \beta)$.
+
+
+## 2.3. Gibbs Sampling Algorithm
+
+Now that we have conditional posterior distributions for each of our parameters, we can utilize the Gibbs Sampling MCMC algorithm to estimate model parameters. In Gibbs sampling, we use starting values $(\boldsymbol{\beta}_0, \Sigma_0, \sigma^2_0, \textbf{B}_0)$ and for each $j = 1,2,...,n$:
+\begin{enumerate}
+  \item[1.] Generate $\boldsymbol{\beta}_j$ from $\pi(\boldsymbol{\beta} \mid \Sigma = \Sigma_{j-1}, \sigma^2 = \sigma^2_{j-1}, \textbf{B} =\textbf{B}_{j-1})$;
+  \item[2.] Generate $\Sigma_j$ from $\pi(\Sigma \mid \boldsymbol{\beta} = \boldsymbol{\beta}_j, \sigma^2 = \sigma^2_{j-1}, \textbf{B} = \textbf{B}_{j-1})$;
+  \item[3.] Generate $\sigma^2$ from $\pi(\sigma^2 \mid \boldsymbol{\beta} = \boldsymbol{\beta}_j, \Sigma = \Sigma_j, \textbf{B} = \textbf{B}_{j-1})$;
+  \item[4.] Generate \textbf{B} from $\pi(\textbf{B} \mid \boldsymbol{\beta} = \boldsymbol{\beta}_j, \Sigma = \Sigma_j,  \sigma^2 = \sigma^2_j)$
+\end{enumerate}
+
+to yield $\Theta_j$. As $j$ increases and the Markov Chain continues, estimates stabilize, and we can obtain our results by taking the mean of the Gibbs-generated parameters. Example code for this algorithm cane be seen in **Appendix A**.
+
+\newpage
+
+# 3. Results 
+
+```{r loading in estimates, include = FALSE}
+load("./data/gibbs_res.RData")
+```
+
+## 3.1. Bayesian Parameter Estimates
+
+To obtain estimates of $\Theta = (\textbf{B}^{T}, \boldsymbol{\beta}^{T}, \sigma^2, \Sigma)$, we first generated 1000 iterations in the Markov Chain. As an illustration, **Figure 1** shows the Markov Chain for $\boldsymbol{\beta}$ estimates. Although there is some noise in the chart, we can see that $\beta_0$ converges to a value approximately equal to 4, $\beta_1$ fluctuates about 1, $\beta_2$ and $\beta_4$ are between 0 and 1, and $\beta_3$ is less than zero.
+
+```{r MCMC beta viz}
+ggplot(data = beta_vec, aes(y = estimate, col = beta)) +
+  geom_line(aes(ind)) +
+  labs(x = "Markov Chain Iteration",
+       y = "Estimate",
+       title = "Figure 1: Markov Chain of Beta Estimates")
+```
+
+We find our estimates by taking the mean of $\Theta_j,\ j = 501,...,1000$. **Table 1** shows estimates for $\boldsymbol{\beta}$, and **Table 2** shows a selection of $\boldsymbol{\beta}_i,\ i = 1,...,6$ estimates from \textbf{B}. **Figure 2** shows the distribution of $\boldsymbol{\beta}_i$ coefficients across the population of hurricanes.
+
+```{r table of estimates}
+beta_estimate %>% 
+  knitr::kable(caption = "Beta Parameter Estimates")
+
+B_est %>% 
+  head() %>% 
+  data.frame() %>% 
+  cbind(i = c(1:6)) %>% 
+  rename(beta0 = 1, beta1 = 2, beta2 = 3, beta3 = 4, beta4 = 5) %>% 
+  relocate(i) %>% 
+  knitr::kable(caption = "Sample of Beta Estimates for i-th Hurricanes")
+
+B_vec <- data.frame(B_est) %>% 
+  rename(beta0 = 1, beta1 = 2, beta2 = 3, beta3 = 4, beta4 = 5) %>% 
+  pivot_longer(cols = beta0:beta4, names_to = "beta", values_to = "estimate") %>% 
+  group_by(beta)
+
+B_avg_est <- data.frame(B_est) %>% 
+  rename(beta0 = 1, beta1 = 2, beta2 = 3, beta3 = 4, beta4 = 5) %>% 
+  pivot_longer(cols = beta0:beta4, names_to = "beta", values_to = "estimate") %>% 
+  group_by(beta) %>% 
+  summarise(avg_est = mean(estimate))
+
+ggplot(data = B_vec, aes(x = estimate, fill = beta)) +
+  geom_histogram(alpha = 0.5, position = "identity", bins = 30) +
+  geom_vline(data = B_avg_est, mapping = aes(xintercept = avg_est), lty = "dashed") +
+  facet_wrap(~beta, ncol = 3, scales = "free") +
+  labs(x = "Beta Estimates Across Hurricanes",
+       y = "Count",
+       title = "Figure 2: Beta Estimates Across Population of Hurricanes",
+       caption = "Note: Vertical lines indicate means.") +
+  theme(legend.position = "")
+```
+
+In **Table 3**, we see the estimated $\Sigma$ matrix. The estimated value of $\sigma^2$ is `r round(mean(sigma2_vec), digits = 2)`.
+
+```{r table of estimates 2, fig.height = 4}
+sigma_est %>% 
+  knitr::kable(caption = "Estimated Sigma Matrix")
+
+acf(sigma2_vec, pl = TRUE, main = "Figure 3: Autocorrelation of Sigma^2 Markov Chain")
+```
+
+\newpage
+
+## 3.2. Bayesian Model Predictions
+
+We can use the above estimates with the Bayesian model below and our predictor variables to estimate $\widehat{Y}_i(t+6)$ for each hurricane.
+
+$$Y_{i}(t+6) =\beta_{0,i}+\beta_{1,i}Y_{i}(t) + \beta_{2,i}\Delta_{i,1}(t)+
+\beta_{3,i}\Delta_{i,2}(t) +\beta_{4,i}\Delta_{i,3}(t)  + \epsilon_{i}(t)$$
+
+```{r plotting mse}
+rel_error_vec <- data.frame(do.call(rbind, rel_error)) %>% 
+  rename(rel_error = 1)
+
+ggplot(data = rel_error_vec, aes(x = rel_error)) +
+  geom_histogram(bins = 50, fill = "dodgerblue2", alpha = 0.7) +
+  labs(x = "Normalized Root Mean Squared Error",
+       y = "",
+       title = "Figure 4: Distribution of Normalized RMSE Across Population of Hurricanes")
+```
+
+Our model performed somewhat well predicting $Y_{i}(t+6)$ with most of our predictions yielding a normalized root-mean-squared-error (RMSE) of less than 0.1. However, there are a few instances of very poor predictions with a normalized RMSE of greater than 0.3.
+
+```{r prediction, message = FALSE}
+record4 <- read_csv("./data/hurricane703.csv") %>%
+  janitor::clean_names() %>% 
+  group_by(id) %>% 
+  filter(n() > 2) %>% 
+  # create delta variables and wind lag - wind speed at time t, Y(t)
+  mutate(lat_change = c(NA, diff(latitude, lag = 1)), # I put zero for first entry, could be NA
+         lng_change = c(NA, diff(longitude, lag = 1)),
+         wind_change = c(NA, diff(wind_kt, lag = 1)),
+         wind_lag = lag(wind_kt, n = 1)) %>%
+  mutate(lat_change = lag(lat_change, n = 1),
+         lng_change = lag(lng_change, n = 1),
+         wind_change = lag(wind_change, n = 1)) %>% 
+  dplyr::select(id, wind_lag, lat_change, lng_change, wind_change, wind_kt) %>% 
+  drop_na() %>% 
+  filter(id == "ABLE.1950" | id == "BAKER.1950" | id == "CHARLIE.1950" | id == "DOG.1950")
+beta_i <- data.frame(cbind(c("ABLE.1950", "BAKER.1950", "CHARLIE.1950", "DOG.1950"), B_est[1:4,]))
+
+# join tables
+join4 <- sqldf("SELECT r.id AS id, wind_lag, lat_change, lng_change, wind_change, wind_kt, X2 AS beta0, X3 AS beta1, X4 AS beta2, X5 AS beta3, X6 AS beta4
+              FROM record4 AS r
+              LEFT JOIN beta_i AS b
+              ON r.id = b.X1")
+# prediction and true value table
+pred_record <- sqldf("SELECT id, (beta0 + beta1*wind_lag + beta2*lat_change + beta3*lng_change + beta4*wind_change) AS prediction, wind_kt
+                     FROM join4") %>% 
+  group_by(id) %>% 
+  mutate(x_axis = 1:n()) %>% 
+  pivot_longer(prediction:wind_kt,
+               names_to = "type",
+               values_to = "wind_speed")
+
+pred_record1 <- pred_record %>% filter(id == "ABLE.1950")
+ggplot(data = pred_record, aes(x = x_axis, y = wind_speed, col = type)) + 
+  geom_line(position = "identity", size = 0.7) +
+  facet_wrap(~id, ncol = 2, scales = "free") +
+  labs(x = "Time",
+       y = "Wind Speed",
+       title = "Figure 5: Hurricane Trajectory Estimates") +
+  theme(legend.position = "right")
+```
+
+According to the first 4 hurricanes recorded, our model performs well when it estimates hurricanes' trajectories.
+
+## 3.3. Changes in Hurricanes over Time
+
+```{r creating graphs for time trends, include = FALSE}
+# avg of last 100 beta_i, 700*5
+B_est2 <- Reduce("+", B_res_list[501:1000]) / length(B_res_list[501:1000])
+colnames(B_est2) <- c('beta0', 'beta1' ,'beta2', 'beta3', 'beta4')
+
+extra_df <- read_csv("./data/hurricane703.csv") %>%
+  janitor::clean_names() %>% 
+  drop_na() %>% 
+  group_by(id) %>% 
+  mutate(month_row = as.numeric(factor(month, levels = month.name)),
+         year = as.numeric(season),
+         type = as.factor(nature),
+         max_speed = max(wind_kt),
+         avg_speed = mean(wind_kt),
+         start_speed = first(wind_kt)) %>% 
+  mutate(month = recode(month_row,
+                        '1' = 13)) %>% 
+  dplyr::select(id, max_speed, avg_speed, start_speed, month, year, type) %>% 
+  filter(n() > 2) %>% 
+  filter(row_number() == 1)
+
+task5_df <- cbind(B_est2, extra_df) %>% 
+  select(id, everything())
+
+# beta_i by month
+df_month <- sqldf('SELECT AVG(beta0) AS b0, AVG(beta1) AS b1, AVG(beta2) AS b2, AVG(beta3) AS b3, AVG(beta4) AS b4,
+                  AVG(max_speed) AS max, AVG(avg_speed) AS average, AVG(start_speed) AS start, month
+                  FROM task5_df
+                  GROUP BY month')
+beta_month <- df_month %>% 
+              select(b0:b4, month) %>% 
+              pivot_longer(b0:b4,
+                           names_to = 'beta',
+                           values_to = 'beta_value')
+speed_month <- df_month %>% 
+               select(max:month) %>% 
+               pivot_longer(max:start,
+                            names_to = 'speed_type',
+                            values_to = 'speed')
+
+# beta_i by year
+df_year <- sqldf('SELECT AVG(beta0) AS b0, AVG(beta1) AS b1, AVG(beta2) AS b2, AVG(beta3) AS b3, AVG(beta4) AS b4,
+                  AVG(max_speed) AS max, AVG(avg_speed) AS average, AVG(start_speed) AS start, year
+                  FROM task5_df
+                  GROUP BY year')
+beta_year <- df_year %>% 
+              select(b0:b4, year) %>% 
+              pivot_longer(b0:b4,
+                           names_to = 'beta',
+                           values_to = 'beta_value')
+speed_year <- df_year %>% 
+               select(max:year) %>% 
+               pivot_longer(max:start,
+                            names_to = 'speed_type',
+                            values_to = 'speed')
+
+beta_month_plot <- ggplot(beta_month, aes(x = month, y = beta_value, color = beta)) + 
+  geom_point() + 
+  geom_smooth(se = F) +
+  labs(x = "Month",
+       y = "Estimate") +
+  theme(legend.position = "")
+speed_month_plot <- ggplot(speed_month, aes(x = month, y = speed, color = speed_type)) +
+  geom_point() + 
+  geom_smooth(se = F) +
+  labs(x = "Month",
+       y = "Speed") +
+  theme(legend.position = "")
+beta_year_plot <- ggplot(beta_year, aes(x = year, y = beta_value, color = beta)) + 
+  geom_point() + 
+  geom_smooth(se = F) +
+  labs(x = "Year",
+       y = "")
+speed_year_plot <- ggplot(speed_year, aes(x = year, y = speed, color = speed_type)) +
+  geom_point() + 
+  geom_smooth(se = F) +
+  labs(x = "Year",
+       y = "")
+```
+
+We can use time variables to examine seasonal differences between hurricanes as well as changes over years. Let $x_{i,1}$ be the month of year when the i-th hurricane began, $x_{i,2}$ be the calendar year in which hurricane i began, and $x_{i,3}$ be the type of the i-th hurricane. Using code similar to that in **Appendix B**, we performed linear regression with $x_{i,1}, x_{i,2},$ and $x_{i,3}$ as predictors of each $\boldsymbol{\beta}_i$ coefficient. For these regressions, our data begins in April and progresses through January to align with typical "hurricane seasons". Note there were no hurricanes observed in February and March.
+
+Before performing regressions, we explored the overall trends of $\beta$ coefficients over time. In **Figure 5**, we can see there are no clear changes in $\beta$ values across months or across years.
+
+```{r beta time plots, message = FALSE}
+beta_month_plot + beta_year_plot +
+  plot_annotation(title = "Figure 6: Beta Estimates Across Months and Years")
+```
+
+Accordingly, we saw no significant relationship between time predictors and $\beta_0, \beta_2, \beta_3$ or $\beta_4$. There was a significant relationship between year and $\beta_1$, the effect of wind speed at time $t$, however the estimated coefficient is approximately $-3.7 \times 10^{-4}$, which is quite small. We did see a significant relationship between $\beta_2$ and $\beta_3$, the effect of change in latitude and change in longitude, and subtropical hurricanes compared to tropical storms. This could mean that the wind speed of subtropical hurricanes is more sensitive to changes in location than for tropical storms. In conclusion, we did not find any significant trends between our estimated $\beta_i$ coefficients and time - years and months. We could interpret this to mean that the effects of change in position, change in wind speed, and previous wind speed do not significantly change for hurricanes at different times.
+
+```{r speed time plots, message = FALSE}
+speed_month_plot + speed_year_plot +
+  plot_annotation(title = "Figure 7: Hurricane Speed Across Months and Years")
+```
+
+We did see changes in wind speed across months and years (see **Figure 6**). For starting wind speed of hurricanes, we saw significant relationships with the month of December compared to April. All months besides January showed increased starting wind speed compared to April. Extra-tropical hurricanes showed a statistically significantly higher starting speed compared to tropical storms, whereas disturbances and not rated hurricanes showed statistically significantly lower starting speed.
+
+For max speed, the later months (July through December) tend to have higher max speeds compared to April, however these are not statistically significant. Despite what some may claim - that wind speed has increased over the years - we find a statistically significant relationship between year and max wind speed indicating that wind speed decreases as year increases. We also find max wind speed is statistically significantly lower for sub-tropical hurricanes compared to tropical storms.
+
+Lastly, we find similar results for average wind speed over time. The months of June through December tend to have higher wind speed compared to April, however this is not statistically significant. Again, we see a statistically significant result that average wind speed tends to decrease as year increases. These trends can be seen in **Figure 6**.
+
+## 3.4. Analyzing Damage and Deaths Caused by Hurricanes
+
+For analyzing damage and deaths caused by 43 hurricanes, we fit the Elastic Net model to perform variable selection.
+
+According to **Figure 7**, we find that damage is not normally distributed; therefore, we took the log of damage to be our response variable, which makes the distribution closer to normal. 
+
+```{r damage and death analysis, message = FALSE, warning = FALSE}
+# loading in data
+hurricaneOutcome <- read.csv("data/hurricaneoutcome2.csv") %>% janitor::clean_names() %>%  
+                    mutate(damage=substr(damage,start=2,stop=10),
+                           month=match(month,month.name),
+                           damage=as.numeric(damage),
+                           deaths=str_remove(deaths,","),
+                           deaths=as.numeric(deaths),
+                           nature=as.factor(nature))
+rownames(hurricaneOutcome) <- hurricaneOutcome$hurrican_id
+hurricane702 <- read_csv("./data/hurricane703.csv") %>% mutate(ID=tolower(ID))
+hurricane43 <- subset(hurricane702,ID %in%rownames(hurricaneOutcome)) 
+# data preparation
+B_est2 <- Reduce("+", B_res_list[501:1000]) / length(B_res_list[501:1000])
+colnames(B_est2) <- c('beta0', 'beta1' ,'beta2', 'beta3', 'beta4')
+
+extra_df <- read_csv("./data/hurricane703.csv") %>%
+  janitor::clean_names() %>% 
+  drop_na() %>% 
+  group_by(id) %>% 
+  dplyr::select(id) %>% 
+  filter(n() > 2) %>% 
+  filter(row_number() == 1) %>% 
+  mutate(id=tolower(id))
+
+rownames(extra_df) <- extra_df$id
+
+B_est_res <- data.frame(cbind(rownames(extra_df),B_est2)) %>% filter(V1 %in% rownames(hurricaneOutcome))
+
+
+hurricane43.infor <- cbind(hurricaneOutcome,B_est_res) %>% select(-V1,-hurrican_id) %>% 
+                      mutate(beta0=as.numeric(beta0),
+                             beta1=as.numeric(beta1),
+                             beta2=as.numeric(beta2),
+                             beta3=as.numeric(beta3),
+                             beta4=as.numeric(beta4)
+                             )
+
+damage_plot <- 
+  ggplot(data = hurricane43.infor, aes(x = damage)) +
+  geom_histogram(bins = 20, alpha = 0.7, fill = "darkgreen") +
+  labs(x = "Damage (in Billion USD)",
+       y = "")
+death_plot <- 
+  ggplot(data = hurricane43.infor, aes(x = deaths)) +
+  geom_histogram(bins = 20, alpha = 0.7, fill = "navy") +
+  labs(x = "Number of Deaths",
+       y = "")
+
+damage_plot + death_plot +
+  plot_annotation(title = "Figure 8: Damage and Deaths Caused by Hurricanes")
+```
+
+```{r storing damage and death models}
+hurricane43.infor1 <- hurricane43.infor %>% select(-deaths)
+lm.damage.par <- lm(log(damage) ~ season + nature + maxspeed + meanspeed + percent_usa + beta4, data = hurricane43.infor1)
+
+hurricane43.infor2 <- hurricane43.infor %>% select(-damage)
+lm.death.par <- lm(log(deaths) ~ maxpressure + percent_poor, hurricane43.infor2)
+```
+
+According to the result, season (or year), maximum recorded wind speed of the hurricane, and percentage affected population that resides in the United States are three statistically significant characteristics related to damage caused by hurricanes. When season, max speed, and percent of USA increase, the average of damage is expected to increase. The average damage increases by `r percent(exp(0.045634)-1, accuracy = 0.01)`, `r percent(exp(0.022327)-1, accuracy = 0.01)`, `r percent(exp(0.007746)-1, accuracy = 0.01)` with one unit increase in season, max speed and percent of USA, respectively. We see mean wind speed is positively associated with average damage while $\beta_4$, or the effect of previous wind speed change on future wind speed, is negatively associated. We also see that not rated hurricanes and tropical storms tend to cause less damage than other types of hurricanes. However, these coefficients are not statistically significant. The mean square error of the model is `r round(mean(lm.damage.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
+
+For deaths, we fit Poisson model since it's count data. According to model results, max pressure and percent poor are two important parameters. When max pressure decreases, the average number of death increases, which makes sense because lower air pressure tends to be associated with more intense hurricanes **[1]**. The average number of deaths increases by `r percent(exp(3.785e-02)-1, accuracy = 0.01)` with one unit increase in percent poor. The mean square error is `r round(mean(lm.death.par$residuals^2), digits = 2)`. Regressions were performed using code similar to that in **Appendix C**.
+
+\newpage
+
+# 4. Discussion
+
+In **Figure 2** we see the distributions of $\beta_i$ estimates across the population of hurricanes. Some of these coefficients, like $\beta_1$ and $\beta_4$, have a relatively narrow range of values. This indicates the effect of wind speed at time $t$ and the effect of change in wind speed from time $t-6$ to $t$ on future wind speed do not vary much between hurricanes. The larger variance of $\beta_2$ and $\beta_3$ indicates the effect of change in position (latitude and longitude) on future wind speed varies more among the population of hurricanes. This makes sense because change in position can have a different effect on wind speed depending on the location of the hurricane. Hurricanes typically weaken closer to land, therefore change in location may have a different effect on wind speed depending on how close the hurricane is to land **[2]**.
+
+Lastly, we see that $\beta_0$ has a larger magnitude of effect on future wind speed. This indicates there are hurricane characteristics not captured in our model that have an influence on future wind speed, and these underlying characteristics differ among the population of hurricanes. As an example of something not captured in this model, wind temperature tends to have influence on the intensity of hurricanes and might play a role in this model.
+
+When examining trends across time, we did not see changes in $\beta_i$ coefficients in different months or years. This indicates the effects of change in position, change in wind speed, and previous wind speed do not significantly change for hurricanes at different times of year or in different years.
+
+We found that season (or year), max wind speed, mean wind speed, and percent of residents in USA to be positively associated with damage caused by hurricanes. These results align with our understanding of the nature of hurricanes - higher wind speeds can lead to more damage. Season (or year) is also positively associated with damage, which could mean that hurricane severity is increasing or it could be a reflection of an increase in value of property that can be damaged in affected areas. For instance, if a beach community receives investment and builds larger, more expensive buildings, a powerful hurricane could cause more damage simply because more property is there to be damaged. We also saw that $\beta_4$, the effect of change in wind speed on future wind speed, and type not rated and tropical storm tended to be negatively associated with damages.
+
+We found that max pressure of a hurricane was negatively associated with deaths. When air pressure decreases, the hurricane tends to intensify with higher winds; therefore a decrease in pressure would indicate a stronger hurricane and a higher potential for death. We saw the percentage of the affected population residing in low GDP countries (i.e., GDP per capita $\leq$ 10,000) was positively associated with deaths. This could be caused by poorer communities having fewer safety measures in place in the event of a hurricane or residents of these lower income areas may have less access to evacuation resources in the event of a hurricane. These results are important to consider when creating evacuation and storm-response policies in order to limit loss of property, or more importantly, loss of life.
+
+## 4.1. Limitations
+
+There are a few limitations in the model estimation technique. First, Bayesian models are sensitive to the selection of prior distributions. The assumption of prior distributions in this scenario were non-informative or weak, however different prior distributions may change results. Additionally, the Gibbs sampling technique may fail under certain conditions. For instance, if the conditional posterior distributions result in extreme probability states, Gibbs sampling may become "trapped" in one of the high-probability conditions. Additionally, Gibbs sampling requires knowledge of conditional posterior distributions, however these distributions can be difficult to derive or intractable in some cases.
+
+When evaluating prediction accuracy, we trained our model on the full data set and then compared predictions of that data set to the actual values. This may more closely approximate training error rather than test error. In order to build a more robust model, we would need to split our data into training and testing data sets before analysis. One way to do this would be to partition the data for each hurricane, using the majority of observations to train parameters and the remaining data to evaluate predictions.
+
+## 4.2. Strengths
+
+One important decision in Bayesian analysis is the assumption of prior distributions. In this application, we assume uninformative or weak prior distributions, so we do not assume too much prior knowledge. Additionally, we found the resulting Markov Chain stabilized relatively quickly, which can reduce the computational overhead required to perform this kind of estimation. Our results from sections 3.3 and 3.4 are easily interpreted due to the simplicity of models used, and our results align with what we know about hurricanes from outside sources (see References).
+
+## 4.3. Future Work
+
+In the future, it would be interesting to include more variables that may have effects on hurricanes such as air temperature and time over water. Additionally, model evaluation could be improved by splitting data into training and testing sets. When examining damages caused by hurricanes, it would be interesting to examine damage per capita of the affected regions or damage per total asset value in affected areas. Similarly, it would potentially be more informative to examine death rates of hurricanes rather than the raw number of deaths.
+
+# Contributions
+
+T.M. drafted posterior distribution of parameters and conducted evaluation of MCMC model performance. Y.P. revised posterior distribution, derived conditional distributions, and analyzed trends of coefficients and hurricane speeds across time. T.M. with Y.P. designed MCMC algorithm in R using Gibbs sampling method to estimate parameters. J.L., W.C., and X.M. built models to analyze damages and deaths caused by hurricanes. T.M., J.L., W.C., X.M., Y.P. drafted the report with T.M. and Y.P. editing it.
+
+\newpage
+
+# References
+
+1. Hurricane Life Cycle. Hurricanes. (n.d.). Retrieved May 7, 2022, from http://www.hurricanescience.org/science/science/hurricanelifecycle/
+
+2. Interaction between a hurricane and the land. Hurricanes. (n.d.). Retrieved May 7, 2022, from http://www.hurricanescience.org/science/science/hurricaneandland/
+
+# Appendix
+
+## Appendix A
+
+```{r, echo = TRUE, eval = FALSE}
+gibbs_function <- function(iter, start, data){
+  # lists to store results
+  beta_list <- list()
+  sigma_list <- list()
+  sigma2_list <- list()
+  B_list <- list()
+  # starting values
+  beta_list[[1]] <- start$beta
+  sigma_list[[1]] <- start$sigma_m
+  sigma2_list[[1]] <- start$sigma2
+  B_list[[1]] <- theta$B
+  # for loop to iteratively generate Markov Chain
+  for (i in 2:iter){
+    beta_list[[i]] <- beta_dist(sigma = sigma_list[[i-1]], B = B_list[[i-1]][[1]])
+    sigma_list[[i]] <- sigma_m_dist(beta = beta_list[[i]][[1]], B = B_list[[i-1]][[1]])
+    sigma2_list[[i]] <- sigma2_dist(B = B_list[[i-1]][[1]], x = data$x, y = data$y)
+    B_list[[i]] <- B_dist(x = data$x, y = data$y, sigma2 = sigma2_list[[i]],
+                          sigma_m = sigma_list[[i]], beta = beta_list[[i]][[1]])
+  }
+  
+  return(list(beta = beta_list, sigma_m = sigma_list,
+              sigma2 = sigma2_list, B = B_list))
+  
+}
+```
+
+
+## Appendix B
+
+```{r task 5 regression code, echo = TRUE, eval = FALSE}
+# beta0 regression
+reg(y = beta0, month, year, type)
+# beta1 regression
+reg(y = beta1, month, year, type)
+# beta2 regression
+reg(y = beta2, month, year, type)
+# beta3 regression
+reg(y = beta3, month, year, type)
+# beta4 regression
+reg(y = beta4, month, year, type)
+# start_speed regression
+reg(y = start_speed, month, year, type)
+# max_speed regression
+reg(y = max_speed, month, year, type)
+# avg_speed regression
+reg(y = avg_speed, month, year, type)
+```
+
+## Appendix C
+
+```{r damage and death regression code, echo = TRUE, eval = FALSE}
+# model training using caret package
+train(log(damage)~.,
+      data = hurricane,
+      method = "glmnet",
+      tuneGrid=expand.grid(alpha = seq(0,1,length=21),
+                           lambda = exp(seq(3,-5,length=100))),
+      trControl = trainControl(method = "repeatedcv", number = 10, repeats = 5))
+# fitting model for damage with selected predictors
+lm(log(damage) ~ season + nature + maxspeed + meanspeed + percent_usa + beta4,
+   data = hurricane)
+```
+
